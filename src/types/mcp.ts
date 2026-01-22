@@ -30,6 +30,10 @@ export interface MissingGuard {
 }
 
 export interface AllowedEvent {
+  /**
+   * イベント名
+   * @term Process.events[].name を参照
+   */
   event_name: string;
   description: string;
   payload_schema?: JSONSchema;
@@ -75,7 +79,15 @@ export type GuardStatus = "satisfied" | "unsatisfied" | "no_guard";
  * イベント遷移情報の基底型（内部用）
  */
 interface EventTransitionBase {
+  /**
+   * 遷移先の状態
+   * @term Process.states[].name を参照
+   */
   to_state: string;
+  /**
+   * ガード条件の名前
+   * @term Process.guards のキーを参照
+   */
   guard?: string;
 }
 
@@ -107,6 +119,10 @@ export type EventTransition = EventTransitionSatisfied | EventTransitionUnsatisf
  * イベント情報の基底型
  */
 interface EventInfoBase {
+  /**
+   * イベント名
+   * @term Process.events[].name を参照
+   */
   event_name: string;
   description: string;
   payload_schema?: JSONSchema;
@@ -155,6 +171,10 @@ export interface ListEventsResponse {
 
 export interface EmitEventRequest {
   run_id: RunId;
+  /**
+   * 発行するイベント名
+   * @term Process.events[].name を参照
+   */
   event_name: string;
   payload?: Record<string, unknown>;
   /** 必須: 楽観ロック */
@@ -170,7 +190,15 @@ export interface EmitEventRequest {
 }
 
 export interface EmitEventTransition {
+  /**
+   * 遷移元の状態
+   * @term Process.states[].name を参照
+   */
   from_state: string;
+  /**
+   * 遷移先の状態
+   * @term Process.states[].name を参照
+   */
   to_state: string;
 }
 
@@ -217,6 +245,10 @@ export type EmitEventErrorCode =
   | "PROCESS_NOT_FOUND";
 
 export interface ValidationError {
+  /**
+   * エラー箇所のパス
+   * @law 形式: JSON Pointer（RFC 6901、例: "/payload/amount"）
+   */
   path: string;
   message: string;
 }

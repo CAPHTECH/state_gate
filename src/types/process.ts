@@ -113,15 +113,30 @@ export interface EventDefinition {
  * 状態の変化を定義: state + event -> state（ガード条件付き）
  */
 export interface Transition {
-  /** 遷移元の状態 */
+  /**
+   * 遷移元の状態
+   * @term Process.states[].name を参照
+   */
   from: string;
-  /** トリガーとなるイベント */
+  /**
+   * トリガーとなるイベント
+   * @term Process.events[].name を参照
+   */
   event: string;
-  /** 遷移先の状態 */
+  /**
+   * 遷移先の状態
+   * @term Process.states[].name を参照
+   */
   to: string;
-  /** ガード条件の名前（guards への参照） */
+  /**
+   * ガード条件の名前
+   * @term Process.guards のキーを参照
+   */
   guard?: string;
-  /** この遷移を実行できるロール */
+  /**
+   * この遷移を実行できるロール
+   * @term Process.roles[].name または "*" を参照
+   */
   allowed_roles?: string[];
   description?: string;
 }

@@ -38,7 +38,10 @@ export interface RunEntry {
    * @grounding emit_event 時に前行 revision + 1 であることを検証
    */
   revision: number;
-  /** 発生したイベント名 */
+  /**
+   * 発生したイベント名
+   * @term Process.events[].name を参照
+   */
   event: string;
   /**
    * 冪等性保証用キー（同一キーの再送は無視）
