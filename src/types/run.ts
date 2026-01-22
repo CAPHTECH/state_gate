@@ -9,6 +9,10 @@ import type { ContextVariables } from "./process.js";
 /**
  * Run ID の形式: run-{UUIDv7}
  * タイムスタンプ順でソート可能
+ *
+ * @law 形式: run-{UUIDv7}（例: run-019471a2-7c8d-7000-8000-000000000001）
+ * @law UUIDv7 部分は RFC 9562 準拠
+ * @grounding ランタイムバリデーションで検証
  */
 export type RunId = `run-${string}`;
 
@@ -16,7 +20,11 @@ export type RunId = `run-${string}`;
  * CSV の1行に対応するエントリ
  */
 export interface RunEntry {
-  /** イベント発生日時（ISO 8601） */
+  /**
+   * イベント発生日時
+   * @law 形式: ISO 8601（例: 2025-01-22T10:00:00Z）
+   * @grounding ランタイムバリデーションで検証
+   */
   timestamp: string;
   /** 遷移後の状態 */
   state: string;
@@ -95,6 +103,10 @@ export const RUN_FILE_PATTERN = ".state_gate/runs";
 
 /**
  * CSV ヘッダー（固定）
+ *
+ * @law CSV_HEADERS の要素は RunEntry のキーと1:1対応
+ * @law 順序は CSV ファイルの列順序を決定
+ * @grounding パース/シリアライズ時にこの定数を使用すること
  */
 export const CSV_HEADERS = [
   "timestamp",
@@ -103,4 +115,4 @@ export const CSV_HEADERS = [
   "event",
   "idempotency_key",
   "artifact_paths",
-] as const;
+] as const satisfies readonly (keyof RunEntry)[];

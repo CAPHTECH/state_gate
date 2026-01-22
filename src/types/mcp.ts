@@ -56,12 +56,37 @@ export interface ListEventsRequest {
 
 export type GuardStatus = "satisfied" | "unsatisfied" | "no_guard";
 
-export interface EventTransition {
+/**
+ * イベント遷移情報の基底型（内部用）
+ */
+interface EventTransitionBase {
   to_state: string;
   guard?: string;
-  guard_status: GuardStatus;
-  missing_requirements?: string[];
 }
+
+/**
+ * ガード充足または無ガードの遷移
+ */
+interface EventTransitionSatisfied extends EventTransitionBase {
+  guard_status: "satisfied" | "no_guard";
+  missing_requirements?: never;
+}
+
+/**
+ * ガード未充足の遷移
+ * @law guard_status === "unsatisfied" => missing_requirements は必須
+ */
+interface EventTransitionUnsatisfied extends EventTransitionBase {
+  guard_status: "unsatisfied";
+  /** 未充足の要件リスト（必須） */
+  missing_requirements: string[];
+}
+
+/**
+ * イベント遷移情報（判別共用体）
+ * Law: guard_status に応じた必須フィールドを型レベルで強制
+ */
+export type EventTransition = EventTransitionSatisfied | EventTransitionUnsatisfied;
 
 /**
  * イベント情報の基底型
@@ -128,9 +153,12 @@ export interface EmitEventTransition {
 
 export interface EmitEventSuccessResult {
   /**
-   * イベントID（UUIDv7 形式）
+   * イベントID
    * idempotency_key とは異なり、システムが生成する一意識別子
    * 監査ログ・トレーサビリティ用途
+   *
+   * @law 形式: UUIDv7（RFC 9562 準拠）
+   * @grounding ランタイムで生成・検証
    */
   event_id: string;
   /**

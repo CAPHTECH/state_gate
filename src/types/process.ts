@@ -43,6 +43,8 @@ export type { JSONSchema } from "./common.js";
  * - `∀t ∈ transitions: ∀r ∈ t.allowed_roles: r ∈ roles[].name ∨ r = "*"` - ロール参照先が存在
  * - `∀g ∈ guards: g.artifact_type ∈ artifacts[].type` - ガードの成果物種別が存在
  * - `∀s ∈ states: ∀a ∈ s.required_artifacts: a ∈ artifacts[].type` - 必須成果物種別が存在
+ *
+ * @grounding validateProcess() 関数で検証（実装: src/validation/process.ts）
  */
 export interface Process {
   /** YAML定義の id に対応 */

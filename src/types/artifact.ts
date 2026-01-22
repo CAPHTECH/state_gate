@@ -1,6 +1,15 @@
 /**
  * Artifact（成果物）の型定義
  * @see docs/concepts.md
+ *
+ * ## Term（用語）の統一
+ *
+ * 成果物種別を参照する際の命名規則:
+ * - `type`: ArtifactDefinition 自身のプロパティ
+ * - `artifact_type`: 他の型から成果物種別を参照する際（Guard など）
+ * - `required_artifacts`: State で必要な成果物種別のリスト
+ *
+ * これらはすべて同じ値空間（artifacts[].type）を参照する。
  */
 
 import type { JSONSchema } from "./common.js";
