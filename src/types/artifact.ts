@@ -25,8 +25,13 @@ export interface ArtifactDefinition {
 }
 
 /**
- * 成果物への参照
- * MVP: 成果物はファイルパスで参照（CSV の artifact_paths 列に保存）
+ * 成果物への参照（将来拡張用）
+ *
+ * MVP では以下の理由により、MCP インターフェースでは artifact_paths: string[] を使用:
+ * - CSV 形式との互換性（パス文字列のみ保存）
+ * - 型推論を必要としない単純なユースケース
+ *
+ * v0.2 以降で type による成果物分類・検索が必要になった際にこの型を活用予定
  */
 export interface ArtifactRef {
   /** 成果物種別 */

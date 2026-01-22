@@ -113,11 +113,20 @@ interface Transition {
 
 ```typescript
 // 成果物の存在・件数をチェック（MVP）
-interface ArtifactGuard {
+// 判別共用体型で condition に応じた必須フィールドを型レベルで強制
+type ArtifactGuard = ArtifactExistsGuard | ArtifactCountGuard;
+
+interface ArtifactExistsGuard {
   type: 'artifact';
   artifact_type: string;
-  condition: 'exists' | 'count';
-  min_count?: number;  // condition: 'count' の場合に使用
+  condition: 'exists';
+}
+
+interface ArtifactCountGuard {
+  type: 'artifact';
+  artifact_type: string;
+  condition: 'count';
+  min_count: number;  // condition: 'count' の場合は必須
 }
 ```
 

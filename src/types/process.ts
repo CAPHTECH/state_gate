@@ -2,6 +2,17 @@
  * Process DSL の型定義
  * @see docs/concepts.md
  * @see docs/process-dsl.md
+ *
+ * ## Source of Truth（正本）
+ *
+ * 以下のデータは複数箇所で参照されるが、正本は1箇所に限定される:
+ *
+ * | データ | 正本 | 参照用 |
+ * |--------|------|--------|
+ * | イベント許可ロール | EventDefinition.allowed_roles | RoleDefinition.allowed_events |
+ * | 状態の必須成果物 | State.required_artifacts | ArtifactDefinition.required_in_states |
+ *
+ * 参照用データは正本と一致していることをバリデーションで確認すること。
  */
 
 import type { ArtifactDefinition } from "./artifact.js";
@@ -12,6 +23,16 @@ export type { JSONSchema } from "./common.js";
 
 /**
  * 状態機械の定義
+ *
+ * ## 参照整合性 Law（不変条件）
+ *
+ * バリデーション時に以下の条件を検証すること:
+ *
+ * - `initial_state ∈ states[].name` - 初期状態は定義済み状態のいずれか
+ * - `∀t ∈ transitions: t.from ∈ states[].name` - 遷移元は定義済み状態
+ * - `∀t ∈ transitions: t.to ∈ states[].name` - 遷移先は定義済み状態
+ * - `∀t ∈ transitions: t.guard → t.guard ∈ keys(guards)` - ガード参照先が存在
+ * - `∀t ∈ transitions: t.event ∈ events[].name` - イベントは定義済み
  */
 export interface Process {
   /** YAML定義の id に対応 */
@@ -64,6 +85,9 @@ export interface EventDefinition {
    * - 空配列: 誰も発行できない（明示的な許可が必要）
    * - ["*"]: 全ロールに許可
    * - ["role1", "role2"]: 指定ロールのみ許可
+   *
+   * @law "*" ∈ allowed_roles → len(allowed_roles) = 1
+   *       （"*" と他のロールの混在は禁止）
    */
   allowed_roles: string[];
 }
@@ -109,7 +133,11 @@ export interface ArtifactCountGuard {
   type: "artifact";
   artifact_type: string;
   condition: "count";
-  /** condition: 'count' の場合は必須 */
+  /**
+   * 必要な成果物の最小件数
+   * condition: 'count' の場合は必須
+   * @law min_count >= 0
+   */
   min_count: number;
 }
 
