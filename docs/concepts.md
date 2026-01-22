@@ -16,6 +16,7 @@ interface Process {
   version: string;
   name: string;
   description?: string;
+  initial_state: string;  // Run作成時の初期状態
 
   states: State[];
   events: EventDefinition[];
@@ -56,10 +57,6 @@ timestamp,state,revision,event,idempotency_key,artifact_paths
 interface State {
   name: string;
   description?: string;
-
-  // 状態に入る/出る時のフック（任意）
-  on_enter?: Hook[];
-  on_exit?: Hook[];
 
   // この状態で必要な成果物
   required_artifacts?: string[];
@@ -143,21 +140,10 @@ interface ArtifactDefinition {
   schema?: JSONSchema;
 }
 
-interface Artifact {
-  artifact_id: string;
-  run_id: string;
-  type: string;
-
-  // コンテンツ（以下のいずれか）
-  content?: unknown;              // インラインコンテンツ
-  path?: string;                  // ファイルパス
-  url?: string;                   // URL
-
-  hash: string;                   // SHA-256 等
-
-  metadata?: Record<string, unknown>;
-  created_at: string;
-  created_by: { type: string; id: string };
+// MVP: 成果物はファイルパスで参照（CSV の artifact_paths 列に保存）
+interface ArtifactRef {
+  type: string;                   // 成果物種別
+  path: string;                   // ファイルパス
 }
 ```
 

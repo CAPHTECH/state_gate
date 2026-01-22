@@ -187,18 +187,18 @@ MCP は**対話面**のインターフェースとして機能し、エージェ
       "blocked_reason": null
     },
     {
-      "event_name": "request_review",
-      "description": "レビューを依頼",
+      "event_name": "submit_synthesis",
+      "description": "統合結果を提出",
       "transitions": [
         {
-          "to_state": "reviewing",
+          "to_state": "decide",
           "guard": "has_synthesis",
           "guard_status": "unsatisfied",
           "missing_requirements": ["synthesis が必要"]
         }
       ],
       "is_allowed": false,
-      "blocked_reason": "現在の状態では発行できません"
+      "blocked_reason": "現在の状態では発行できません（synthesize 状態でのみ発行可能）"
     }
   ]
 }
@@ -220,13 +220,7 @@ MCP は**対話面**のインターフェースとして機能し、エージェ
   idempotency_key: string;       // 必須: 冪等性保証
 
   // 成果物の添付（任意）
-  artifacts?: Array<{
-    type: string;
-    content?: unknown;
-    path?: string;
-    url?: string;
-    metadata?: Record<string, unknown>;
-  }>;
+  artifact_paths?: string[];  // ファイルパスの配列
 }
 ```
 
@@ -246,9 +240,6 @@ MCP は**対話面**のインターフェースとして機能し、エージェ
     };
 
     new_revision: number;
-
-    // 作成された成果物の参照
-    artifact_refs?: string[];
   };
 
   // 失敗時
@@ -280,18 +271,9 @@ MCP は**対話面**のインターフェースとして機能し、エージェ
     },
     "expected_revision": 3,
     "idempotency_key": "obs-2024-01-15-001",
-    "artifacts": [
-      {
-        "type": "observation",
-        "content": {
-          "findings": "ユーザーは検索バーを見つけるのに平均5秒かかった",
-          "confidence_level": "high"
-        }
-      },
-      {
-        "type": "screenshot",
-        "path": "/artifacts/screenshots/search-test-001.png"
-      }
+    "artifact_paths": [
+      "./evidence/observation-001.md",
+      "./evidence/screenshots/search-test-001.png"
     ]
   }
 }
@@ -306,8 +288,7 @@ MCP は**対話面**のインターフェースとして機能し、エージェ
       "from_state": "observe",
       "to_state": "observe"  // ガード未充足のため状態は変わらない
     },
-    "new_revision": 4,
-    "artifact_refs": ["art-001", "art-002"]
+    "new_revision": 4
   }
 }
 

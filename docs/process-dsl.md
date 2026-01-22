@@ -6,10 +6,9 @@ Process 定義のための DSL（Domain Specific Language）仕様。
 
 ## 設計目標
 
-1. **状態爆発を避ける**: 差分（ドメイン探索/デザイン探索など）を効率的に表現
-2. **階層状態のサポート**: HFSM（Hierarchical Finite State Machine）を表現可能
-3. **並行領域のサポート**: 直交する関心事を表現可能
-4. **可読性**: 人間が読み書きしやすい形式
+1. **シンプルさ**: フラットな状態機械で必要十分な表現力
+2. **可読性**: 人間が読み書きしやすい YAML 形式
+3. **検証可能性**: 定義の整合性を静的にチェック可能
 
 ---
 
@@ -336,26 +335,6 @@ process:
       team_mode:
         type: string
         enum: [solo, team, async]
-```
-
----
-
-## フックの定義
-
-```yaml
-states:
-  - name: experiment
-    on_enter:
-      - action: notify
-        channel: slack
-        message: "実験フェーズを開始しました"
-
-    on_exit:
-      - action: log
-        message: "実験フェーズを終了しました"
-
-      - action: collect_metrics
-        metrics: [duration, artifact_count]
 ```
 
 ---

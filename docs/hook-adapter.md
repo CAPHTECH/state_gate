@@ -111,8 +111,8 @@ if [ -z "$RUN_ID" ]; then
   exit 0
 fi
 
-# state_gate に問い合わせ
-STATE=$(state-gate get-state --run-id "$RUN_ID" --format json)
+# state_gate に問い合わせ（出力は常にJSON）
+STATE=$(state-gate get-state --run-id "$RUN_ID")
 
 # ポリシー評価（シンプルな例）
 CURRENT_STATE=$(echo "$STATE" | jq -r '.current_state')
