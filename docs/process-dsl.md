@@ -81,7 +81,14 @@ events:
     description: 観察結果を提出
     allowed_roles: [agent, human]
     payload_schema:
-      $ref: "#/schemas/observation"
+      type: object
+      required: [findings]
+      properties:
+        findings:
+          type: string
+        confidence_level:
+          type: string
+          enum: [high, medium, low]
 
   - name: submit_synthesis
     description: 統合結果を提出
@@ -249,38 +256,15 @@ roles:
     can_approve: true
     can_reject: true
 
-# スキーマ定義（再利用用）
-schemas:
-  observation:
-    type: object
-    required: [findings]
-    properties:
-      findings:
-        type: string
-      confidence_level:
-        type: string
-        enum: [high, medium, low]
-      compared_with:
-        type: array
-        items:
-          type: string
-      time_spent_seconds:
-        type: integer
-      screenshots:
-        type: array
-        items:
-          type: string
-      videos:
-        type: array
-        items:
-          type: string
 ```
 
 ---
 
 ## ガード条件の詳細
 
-### 成果物ガード
+### 成果物ガード（MVP）
+
+MVP では `exists`（存在チェック）と `count`（件数チェック）のみをサポート。
 
 ```yaml
 guards:
@@ -296,16 +280,6 @@ guards:
     artifact_type: observation
     condition: count
     min_count: 3
-
-  # フィールドチェック
-  complete_observation:
-    type: artifact
-    artifact_type: observation
-    condition: has_fields
-    required_fields:
-      - findings
-      - confidence_level
-      - evidence_refs
 ```
 
 ---

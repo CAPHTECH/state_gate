@@ -112,13 +112,12 @@ interface Transition {
 遷移を許可する条件。MVP では成果物ガードのみをサポート。
 
 ```typescript
-// 成果物の存在・件数・必須フィールドをチェック
+// 成果物の存在・件数をチェック（MVP）
 interface ArtifactGuard {
   type: 'artifact';
   artifact_type: string;
-  condition: 'exists' | 'count' | 'has_fields';
-  min_count?: number;
-  required_fields?: string[];
+  condition: 'exists' | 'count';
+  min_count?: number;  // condition: 'count' の場合に使用
 }
 ```
 

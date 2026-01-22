@@ -50,7 +50,7 @@ MCP は**対話面**のインターフェースとして機能し、エージェ
   required_artifacts: Array<{
     type: string;
     description: string;
-    status: 'missing' | 'present' | 'incomplete';
+    status: 'missing' | 'present';  // MVP: ファイル存在チェックのみ
   }>;
 
   // 現在発行可能なイベント

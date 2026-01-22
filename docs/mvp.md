@@ -26,7 +26,7 @@ MVP では以下を実現する:
 - [ ] 状態の定義（name, description, is_final）
 - [ ] イベントの定義（name, payload_schema, allowed_roles）
 - [ ] 遷移の定義（from, event, to, guard）
-- [ ] ガードの定義（artifact 存在チェックのみ）
+- [ ] ガードの定義（artifact 存在チェック・件数チェック）
 - [ ] ロールの定義（agent, human, reviewer）
 - [ ] Process 定義の検証（必須フィールド、参照整合性）
 
@@ -321,7 +321,7 @@ MVP では以下を**サポートしない**:
 1. **階層状態**: フラットな状態のみ
 2. **並行領域**: 単一の状態系列のみ
 3. **複合ガード**: 単一のガード条件のみ
-4. **機械検証**: Artifact 存在チェックのみ
+4. **機械検証**: Artifact 存在チェック・件数チェックのみ
 5. **状態フック**: on_enter/on_exit なし
 6. **承認ワークフロー**: approve/reject の特別扱いなし
 7. **HTTP API**: MCP と CLI のみ

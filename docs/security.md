@@ -41,7 +41,6 @@ roles:
     allowed_events:
       - approve
       - reject
-      - request_changes
     can_approve: true
     can_reject: true
 ```
@@ -85,14 +84,14 @@ roles:
 
 ## 参照中心の設計
 
-Hook/エージェントから state_gate への送信内容は、原則として**参照（artifact_id）**中心にする。
+Hook/エージェントから state_gate への送信内容は、原則として**ファイルパス参照**中心にする。
 
 ```typescript
-// 良い例: 参照を送信
+// 良い例: ファイルパスで参照を送信
 emit_event({
-  event_name: 'submit_evidence',
+  event_name: 'submit_observation',
+  artifact_paths: ['./evidence/obs1.md', './evidence/obs2.md'],
   payload: {
-    artifact_refs: ['art-001', 'art-002'],
     summary: '2件の観察結果を提出'
   }
 });
