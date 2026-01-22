@@ -74,6 +74,18 @@ export class RunStore {
   }
 
   /**
+   * revision を検証してからエントリを追加（アトミック操作）
+   * TOCTOU 競合を防止
+   */
+  async appendEntryWithRevisionCheck(
+    runId: RunId,
+    entry: RunEntry,
+    expectedRevision: number
+  ): Promise<{ conflict: true; currentRevision: number } | { conflict: false }> {
+    return this.csvStore.appendEntryWithRevisionCheck(runId, entry, expectedRevision);
+  }
+
+  /**
    * 冪等性キーでエントリを検索
    */
   async getEntryByIdempotencyKey(

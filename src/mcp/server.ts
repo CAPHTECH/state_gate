@@ -13,7 +13,22 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import type { RunId } from "../types/index.js";
-import { StateEngine } from "../engine/state-engine.js";
+import { StateEngine, StateEngineError } from "../engine/state-engine.js";
+
+/**
+ * RunId の形式を検証（パストラバーサル防止）
+ * @param id - 検証対象の文字列
+ * @returns 有効な RunId
+ * @throws Error - 形式が不正な場合
+ */
+function validateRunId(id: string): RunId {
+  // UUIDv7 形式: run-xxxxxxxx-xxxx-7xxx-xxxx-xxxxxxxxxxxx
+  const pattern = /^run-[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!pattern.test(id)) {
+    throw new Error(`Invalid run_id format: ${id}`);
+  }
+  return id as RunId;
+}
 import { handleGetState } from "../engine/handlers/get-state.js";
 import { handleListEvents } from "../engine/handlers/list-events.js";
 import { handleEmitEvent } from "../engine/handlers/emit-event.js";
@@ -189,7 +204,7 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
     try {
       switch (name) {
         case "state_gate.get_state": {
-          const runId = (args as { run_id: string }).run_id as RunId;
+          const runId = validateRunId((args as { run_id: string }).run_id);
           const result = await handleGetState(engine, { run_id: runId }, defaultRole);
           return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
@@ -199,7 +214,7 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
         case "state_gate.list_events": {
           const listArgs = args as { run_id: string; include_blocked?: boolean };
           const listRequest: import("../types/index.js").ListEventsRequest = {
-            run_id: listArgs.run_id as RunId,
+            run_id: validateRunId(listArgs.run_id),
           };
           if (listArgs.include_blocked !== undefined) {
             listRequest.include_blocked = listArgs.include_blocked;
@@ -220,7 +235,7 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
             artifact_paths?: string[];
           };
           const emitRequest: import("../types/index.js").EmitEventRequest = {
-            run_id: emitArgs.run_id as RunId,
+            run_id: validateRunId(emitArgs.run_id),
             event_name: emitArgs.event_name,
             expected_revision: emitArgs.expected_revision,
             idempotency_key: emitArgs.idempotency_key,
@@ -300,12 +315,31 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
           };
       }
     } catch (error) {
+      // StateEngineError は安全なエラーメッセージを持つ
+      // その他のエラーは内部詳細を隠蔽
+      let publicMessage: string;
+      let errorCode: string | undefined;
+
+      if (error instanceof StateEngineError) {
+        publicMessage = error.message;
+        errorCode = error.code;
+      } else if (error instanceof Error && error.message.startsWith("Invalid run_id")) {
+        publicMessage = error.message;
+        errorCode = "INVALID_INPUT";
+      } else {
+        // 内部エラーの詳細は隠蔽し、ログに記録
+        console.error("MCP Server internal error:", error);
+        publicMessage = "Internal server error";
+        errorCode = "INTERNAL_ERROR";
+      }
+
       return {
         content: [
           {
             type: "text",
             text: JSON.stringify({
-              error: error instanceof Error ? error.message : "Unknown error",
+              error: publicMessage,
+              code: errorCode,
             }),
           },
         ],
@@ -337,7 +371,7 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
       throw new Error(`Invalid resource URI: ${uri}`);
     }
 
-    const runId = match[1] as RunId;
+    const runId = validateRunId(match[1]!);
     const runState = await engine.getRunState(runId);
     const process = engine.getProcess(runState.process_id);
 

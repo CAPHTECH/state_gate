@@ -35,7 +35,15 @@ export interface EmitEventResult {
     toState: string;
   };
   newRevision: number;
+  /** 冪等性キーによるリプレイ時に true */
   replayed?: true;
+  /** リプレイ時の追加情報 */
+  replayInfo?: {
+    /** 元のエントリが記録された時刻 */
+    originalTimestamp: string;
+    /** 元のエントリの状態 */
+    state: string;
+  };
 }
 
 /**
@@ -75,6 +83,10 @@ export async function emitEvent(
       accepted: true,
       newRevision: existingEntry.revision,
       replayed: true,
+      replayInfo: {
+        originalTimestamp: existingEntry.timestamp,
+        state: existingEntry.state,
+      },
     };
   }
 
@@ -180,8 +192,23 @@ export async function emitEvent(
     artifact_paths: (params.artifactPaths ?? []).join(";"),
   };
 
-  // 保存
-  await runStore.appendEntry(params.runId, newEntry);
+  // アトミックに revision 検証 + 保存（TOCTOU 競合防止）
+  const appendResult = await runStore.appendEntryWithRevisionCheck(
+    params.runId,
+    newEntry,
+    params.expectedRevision
+  );
+
+  if (appendResult.conflict) {
+    throw new StateEngineError(
+      `Revision conflict: expected ${params.expectedRevision}, current ${appendResult.currentRevision}`,
+      "REVISION_CONFLICT",
+      {
+        currentRevision: appendResult.currentRevision,
+        expectedRevision: params.expectedRevision,
+      }
+    );
+  }
 
   return {
     eventId: uuidv7(),

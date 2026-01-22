@@ -7,6 +7,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { RunId, RunEntry, ParsedRunEntry, CSV_HEADERS } from "../types/index.js";
+import { withFileLock } from "./file-lock.js";
 
 /**
  * CSV ストアエラー
@@ -78,40 +79,45 @@ export class CsvStore {
     await this.ensureDir();
     const filePath = this.getFilePath(runId);
 
-    // 既存ファイルチェック
-    try {
-      await fs.access(filePath);
-      throw new CsvStoreError(`Run ${runId} already exists`);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-        if (error instanceof CsvStoreError) throw error;
-        throw new CsvStoreError(`Failed to check run existence: ${runId}`, error);
+    await withFileLock(filePath, async () => {
+      // 既存ファイルチェック
+      try {
+        await fs.access(filePath);
+        throw new CsvStoreError(`Run ${runId} already exists`);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+          if (error instanceof CsvStoreError) throw error;
+          throw new CsvStoreError(`Failed to check run existence: ${runId}`, error);
+        }
       }
-    }
 
-    // ヘッダー + 初期エントリを書き込み
-    const content = [
-      HEADERS.join(","),
-      this.entryToCsvLine(initialEntry),
-    ].join("\n") + "\n";
+      // ヘッダー + 初期エントリを書き込み
+      const content = [
+        HEADERS.join(","),
+        this.entryToCsvLine(initialEntry),
+      ].join("\n") + "\n";
 
-    await fs.writeFile(filePath, content, "utf-8");
+      await fs.writeFile(filePath, content, "utf-8");
+    });
   }
 
   /**
    * エントリを追加（append-only）
+   * ファイルロックにより競合状態を防止
    */
   async appendEntry(runId: RunId, entry: RunEntry): Promise<void> {
     const filePath = this.getFilePath(runId);
 
-    try {
-      await fs.access(filePath);
-    } catch {
-      throw new CsvStoreError(`Run ${runId} does not exist`);
-    }
+    await withFileLock(filePath, async () => {
+      try {
+        await fs.access(filePath);
+      } catch {
+        throw new CsvStoreError(`Run ${runId} does not exist`);
+      }
 
-    const line = this.entryToCsvLine(entry) + "\n";
-    await fs.appendFile(filePath, line, "utf-8");
+      const line = this.entryToCsvLine(entry) + "\n";
+      await fs.appendFile(filePath, line, "utf-8");
+    });
   }
 
   /**
@@ -183,6 +189,66 @@ export class CsvStore {
     return files
       .filter((f) => f.endsWith(".csv") && f.startsWith("run-"))
       .map((f) => f.slice(0, -4) as RunId);
+  }
+
+  /**
+   * revision を検証してからエントリを追加（アトミック操作）
+   * TOCTOU 競合を防止するため、ロック内で検証と書き込みを実行
+   * @returns 成功時は undefined、revision 不一致時は現在の revision を返す
+   */
+  async appendEntryWithRevisionCheck(
+    runId: RunId,
+    entry: RunEntry,
+    expectedRevision: number
+  ): Promise<{ conflict: true; currentRevision: number } | { conflict: false }> {
+    const filePath = this.getFilePath(runId);
+
+    return await withFileLock(filePath, async () => {
+      // ロック内で最新 revision を取得
+      const entries = await this.readEntriesInternal(filePath);
+      const latestEntry = entries.length > 0 ? entries[entries.length - 1] : undefined;
+      const currentRevision = latestEntry?.revision ?? 0;
+
+      if (currentRevision !== expectedRevision) {
+        return { conflict: true, currentRevision };
+      }
+
+      // 検証通過、書き込み実行
+      const line = this.entryToCsvLine(entry) + "\n";
+      await fs.appendFile(filePath, line, "utf-8");
+
+      return { conflict: false };
+    });
+  }
+
+  /**
+   * 内部用: ファイルパスから直接エントリを読み込み（ロック外で使用しないこと）
+   */
+  private async readEntriesInternal(filePath: string): Promise<ParsedRunEntry[]> {
+    let content: string;
+    try {
+      content = await fs.readFile(filePath, "utf-8");
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+        return [];
+      }
+      throw error;
+    }
+
+    const lines = this.splitCsvRows(content.trim());
+    if (lines.length < 2) {
+      return [];
+    }
+
+    const entries: ParsedRunEntry[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i]!;
+      if (line.trim()) {
+        entries.push(this.csvLineToEntry(line));
+      }
+    }
+
+    return entries;
   }
 
   /**
