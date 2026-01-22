@@ -170,9 +170,23 @@ export interface ValidationError {
   message: string;
 }
 
+/**
+ * エラー詳細情報
+ *
+ * ## Law: エラーコードに応じた必須フィールド
+ *
+ * - `REVISION_CONFLICT` → `current_revision` が存在すべき
+ * - `GUARD_FAILED` → `missing_guards` が存在すべき
+ * - `INVALID_PAYLOAD` → `validation_errors` が存在すべき
+ *
+ * 注意: 型レベルでの強制は複雑になるため、ランタイムで保証する
+ */
 export interface EmitEventErrorDetails {
+  /** REVISION_CONFLICT 時: 現在の revision */
   current_revision?: number;
+  /** GUARD_FAILED 時: 未充足のガード名リスト */
   missing_guards?: string[];
+  /** INVALID_PAYLOAD 時: バリデーションエラー詳細 */
   validation_errors?: ValidationError[];
 }
 
@@ -199,15 +213,57 @@ export interface PreToolUseInput {
 
 export type HookDecision = "allow" | "deny" | "ask";
 
-export interface PreToolUseOutput {
-  decision: HookDecision;
-  /** deny の場合 */
-  reason?: string;
-  /** ask の場合 */
-  question?: string;
-  /** 追加情報 */
-  context?: {
-    current_state: string;
-    missing_requirements?: string[];
-  };
+/**
+ * Hook コンテキスト情報
+ */
+export interface HookContext {
+  current_state: string;
+  missing_requirements?: string[];
 }
+
+/**
+ * Hook 出力の基底型（内部用）
+ */
+interface PreToolUseOutputBase {
+  context?: HookContext;
+}
+
+/**
+ * ツール使用を許可
+ */
+interface PreToolUseOutputAllow extends PreToolUseOutputBase {
+  decision: "allow";
+  reason?: never;
+  question?: never;
+}
+
+/**
+ * ツール使用を拒否
+ * @law decision === "deny" => reason は必須
+ */
+interface PreToolUseOutputDeny extends PreToolUseOutputBase {
+  decision: "deny";
+  /** 拒否理由（必須） */
+  reason: string;
+  question?: never;
+}
+
+/**
+ * ユーザーに確認を求める
+ * @law decision === "ask" => question は必須
+ */
+interface PreToolUseOutputAsk extends PreToolUseOutputBase {
+  decision: "ask";
+  reason?: never;
+  /** 確認質問（必須） */
+  question: string;
+}
+
+/**
+ * Hook 出力（判別共用体）
+ * Law: decision に応じた必須フィールドを型レベルで強制
+ */
+export type PreToolUseOutput =
+  | PreToolUseOutputAllow
+  | PreToolUseOutputDeny
+  | PreToolUseOutputAsk;

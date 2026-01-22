@@ -65,4 +65,5 @@ export type {
   PreToolUseInput,
   PreToolUseOutput,
   HookDecision,
+  HookContext,
 } from "./mcp.js";

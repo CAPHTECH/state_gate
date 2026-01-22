@@ -20,7 +20,11 @@ export interface RunEntry {
   timestamp: string;
   /** 遷移後の状態 */
   state: string;
-  /** 楽観ロック用の単調増加番号 */
+  /**
+   * 楽観ロック用の単調増加番号
+   * @law revision >= 1（初期行は revision 1）
+   * @law revision は行ごとに単調増加
+   */
   revision: number;
   /** 発生したイベント名 */
   event: string;

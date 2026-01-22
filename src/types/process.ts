@@ -24,6 +24,13 @@ export type { JSONSchema } from "./common.js";
 /**
  * 状態機械の定義
  *
+ * ## 一意性 Law（不変条件）
+ *
+ * - `unique(states[].name)` - 状態名は重複禁止
+ * - `unique(events[].name)` - イベント名は重複禁止
+ * - `unique(roles[].name)` - ロール名は重複禁止
+ * - `unique(artifacts[].type)` - 成果物種別は重複禁止
+ *
  * ## 参照整合性 Law（不変条件）
  *
  * バリデーション時に以下の条件を検証すること:
@@ -33,6 +40,9 @@ export type { JSONSchema } from "./common.js";
  * - `∀t ∈ transitions: t.to ∈ states[].name` - 遷移先は定義済み状態
  * - `∀t ∈ transitions: t.guard → t.guard ∈ keys(guards)` - ガード参照先が存在
  * - `∀t ∈ transitions: t.event ∈ events[].name` - イベントは定義済み
+ * - `∀t ∈ transitions: ∀r ∈ t.allowed_roles: r ∈ roles[].name ∨ r = "*"` - ロール参照先が存在
+ * - `∀g ∈ guards: g.artifact_type ∈ artifacts[].type` - ガードの成果物種別が存在
+ * - `∀s ∈ states: ∀a ∈ s.required_artifacts: a ∈ artifacts[].type` - 必須成果物種別が存在
  */
 export interface Process {
   /** YAML定義の id に対応 */
