@@ -51,20 +51,27 @@ Process を適用した実行単位を管理する。
 1 Run = 1 CSVファイル。イベントごとに1行追記し、最新状態は最終行。
 
 ```
-.state_gate/runs/{run_id}.csv
+.state_gate/
+├── processes/
+│   └── {process_id}.yaml    # Process定義
+└── runs/
+    └── {run_id}.csv         # Run履歴
 ```
 
 ```csv
-timestamp,state,revision,event,artifact_paths
-2025-01-22T10:00:00Z,initial,1,created,
-2025-01-22T10:05:00Z,evidence_gathering,2,submit_evidence,./evidence/obs1.md
-2025-01-22T10:10:00Z,review_requested,3,request_review,./evidence/obs1.md;./evidence/obs2.md
+timestamp,state,revision,event,idempotency_key,artifact_paths
+2025-01-22T10:00:00Z,frame,1,created,,
+2025-01-22T10:05:00Z,experiment,2,submit_hypothesis,hyp-001,./evidence/hyp1.md
+2025-01-22T10:10:00Z,observe,3,submit_experiment_plan,exp-001,./evidence/plan1.md
 ```
+
+**Run ID形式**: `run-{UUIDv7}`（タイムスタンプ順ソート可能）
 
 **メリット**:
 - 追記のみ → シンプル、競合しにくい
 - 最新状態 = `tail -1`
 - 履歴が自然に残る
+- idempotency_key で冪等性保証
 
 ### 3. MCP インターフェース
 
@@ -129,9 +136,42 @@ Claude Code hooks との連携。
   - 状態取得
   - ポリシー評価（シンプルな許可/拒否）
   - allow/deny の返却
-- [ ] CLI コマンド
-  - `state-gate get-state --run-id <id>`
-  - `state-gate emit-event --run-id <id> --event <name> ...`
+- [ ] CLI コマンド（出力は全てJSON）
+
+**CLI コマンド詳細**:
+
+| コマンド | 説明 |
+|---------|------|
+| `create-run` | Run作成 |
+| `get-state` | 状態取得 |
+| `list-events` | 発行可能イベント一覧 |
+| `emit-event` | イベント発行 |
+| `list-runs` | Run一覧 |
+
+```bash
+# Run作成
+state-gate create-run \
+  --process-id exploration-process \
+  --context '{"exploration_mode": "domain"}'
+# → {"run_id": "run-019471a2-...", "initial_state": "frame", "revision": 1}
+
+# 状態取得
+state-gate get-state --run-id run-019471a2-...
+# → {"current_state": "frame", "revision": 1, ...}
+
+# イベント発行
+state-gate emit-event \
+  --run-id run-019471a2-... \
+  --event submit_hypothesis \
+  --payload '{"hypothesis_text": "..."}' \
+  --expected-revision 1 \
+  --idempotency-key hyp-001 \
+  --artifact-paths "./evidence/hyp1.md"
+# → {"success": true, "result": {...}}
+
+# 複数artifact（セミコロン区切り）
+--artifact-paths "./a.md;./b.md"
+```
 
 **スコープ外（v0.2以降）**:
 - PostToolUse での自動提出
@@ -140,26 +180,31 @@ Claude Code hooks との連携。
 
 ---
 
-## 技術スタック（推奨）
+## 技術スタック
 
 ### 言語・ランタイム
-- TypeScript / Node.js
-- または Python 3.11+
+- TypeScript / Node.js（ES2022+）
 
 ### データストア
 - CSVファイル（追記方式、最もシンプル）
 
 ### MCP 実装
-- `@modelcontextprotocol/sdk`（TypeScript）
-- または `mcp`（Python）
+- `@modelcontextprotocol/sdk`
+
+### 主要依存
+- `uuid`（UUIDv7生成）
+- `yaml`（Process定義パース）
+- `zod`（スキーマ検証）
 
 ---
 
-## ディレクトリ構造（案）
+## ディレクトリ構造
 
 ```
 state_gate/
 ├── README.md
+├── package.json
+├── tsconfig.json
 ├── docs/
 │   ├── architecture.md
 │   ├── concepts.md
@@ -172,24 +217,35 @@ state_gate/
 │   ├── core/
 │   │   ├── engine.ts        # State Engine
 │   │   ├── process.ts       # Process 定義の読込・検証
-│   │   ├── run.ts           # Run 管理
+│   │   ├── run.ts           # Run 管理（CSV読み書き）
 │   │   ├── guard.ts         # ガード評価
 │   │   └── artifact.ts      # Artifact 管理
 │   ├── mcp/
 │   │   ├── server.ts        # MCP サーバー
 │   │   └── tools.ts         # MCP Tools 実装
 │   └── cli/
-│       └── index.ts         # CLI エントリポイント
+│       ├── index.ts         # CLI エントリポイント
+│       └── commands/        # 各コマンド実装
+│           ├── create-run.ts
+│           ├── get-state.ts
+│           ├── list-events.ts
+│           ├── emit-event.ts
+│           └── list-runs.ts
 ├── examples/
 │   └── exploration/
 │       ├── process.yaml     # サンプル Process 定義
 │       └── README.md
-├── tests/
-│   ├── core/
-│   ├── mcp/
-│   └── integration/
-├── package.json
-└── tsconfig.json
+└── tests/
+    ├── core/
+    ├── mcp/
+    └── integration/
+
+# 実行時データ（.gitignore対象）
+.state_gate/
+├── processes/
+│   └── {process_id}.yaml    # Process定義（コピーまたはシンボリックリンク）
+└── runs/
+    └── {run_id}.csv         # Run履歴
 ```
 
 ---

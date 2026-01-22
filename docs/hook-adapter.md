@@ -284,16 +284,36 @@ connection_error:
 
 Hook Adapter は CLI としても使用可能。
 
-**インストール**: MVP ではローカルビルドを使用
+**インストール**:
 ```bash
 # リポジトリをクローンしてビルド
-cargo build --release
-# PATHに追加、または直接実行
-./target/release/state-gate
+npm install
+npm run build
+
+# グローバルインストール（オプション）
+npm link
+
+# または直接実行
+npx state-gate <command>
 ```
 
-**コマンド**:
+**コマンド一覧**:
+
+| コマンド | 説明 |
+|---------|------|
+| `create-run` | Run作成 |
+| `get-state` | 状態取得 |
+| `list-events` | 発行可能イベント一覧 |
+| `emit-event` | イベント発行 |
+| `list-runs` | Run一覧 |
+
+**使用例**:
 ```bash
+# Run作成
+state-gate create-run \
+  --process-id exploration-process \
+  --context '{"exploration_mode": "domain"}'
+
 # 状態取得
 state-gate get-state --run-id <run_id>
 
@@ -303,5 +323,8 @@ state-gate emit-event \
   --event <event_name> \
   --payload '<json>' \
   --expected-revision <n> \
-  --idempotency-key <key>
+  --idempotency-key <key> \
+  --artifact-paths "./evidence/obs1.md"
 ```
+
+**出力**: 全コマンドJSON形式で出力

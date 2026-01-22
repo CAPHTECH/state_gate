@@ -22,6 +22,7 @@ process:
   version: "1.0.0"
   name: 探索プロセス
   description: ドメイン・デザイン探索のための汎用プロセス
+  initial_state: frame  # Run作成時の初期状態
 
 # 状態定義
 states:
@@ -316,6 +317,7 @@ guards:
 process:
   id: exploration-process
   version: "1.0.0"
+  initial_state: frame  # 必須: Run作成時の初期状態
 
   # 初期コンテキスト
   initial_context:

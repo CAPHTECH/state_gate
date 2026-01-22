@@ -32,16 +32,21 @@ interface Process {
 
 **CSVファイル形式（1 Run = 1ファイル）**:
 
+```
+.state_gate/runs/{run_id}.csv
+```
+
 ```csv
-timestamp,state,revision,event,artifact_paths
-2025-01-22T10:00:00Z,initial,1,created,
-2025-01-22T10:05:00Z,evidence_gathering,2,submit_evidence,./evidence/obs1.md
+timestamp,state,revision,event,idempotency_key,artifact_paths
+2025-01-22T10:00:00Z,frame,1,created,,
+2025-01-22T10:05:00Z,experiment,2,submit_hypothesis,hyp-001,./evidence/hyp1.md
 ```
 
 - 最新状態は最終行から取得
 - 履歴は自然に残る（追記方式）
 - RFC 4180 準拠（カンマ・改行・ダブルクォートを含む値はダブルクォートで囲む）
 - `artifact_paths` は複数パスをセミコロン区切りで格納
+- `idempotency_key` は冪等性保証用（同一キーの再送は無視）
 
 ### State（状態）
 
@@ -220,7 +225,18 @@ interface RoleDefinition {
 | `state` | 遷移後の状態 |
 | `revision` | 楽観ロック用の単調増加番号 |
 | `event` | 発生したイベント名 |
+| `idempotency_key` | 冪等性保証用キー（同一キーの再送は無視） |
 | `artifact_paths` | 成果物パス（セミコロン区切り） |
+
+## Run ID 形式
+
+```
+run-{UUIDv7}
+例: run-019471a2-7c8d-7000-8000-000000000001
+```
+
+- UUIDv7 はタイムスタンプ順でソート可能
+- 接頭辞 `run-` で識別しやすい
 
 ---
 
