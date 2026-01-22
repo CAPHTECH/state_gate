@@ -26,8 +26,21 @@ export interface RunEntry {
   event: string;
   /** 冪等性保証用キー（同一キーの再送は無視） */
   idempotency_key: string;
-  /** 成果物パス（セミコロン区切り） */
+  /**
+   * 成果物パス（セミコロン区切り文字列）
+   * CSV形式との互換性のため string 型
+   * 注意: セミコロンを含むパスは扱えない制約あり
+   * 使用時は ParsedRunEntry への変換を推奨
+   */
   artifact_paths: string;
+}
+
+/**
+ * パース済みの RunEntry
+ * artifact_paths を配列として扱う場合に使用
+ */
+export interface ParsedRunEntry extends Omit<RunEntry, "artifact_paths"> {
+  artifact_paths: string[];
 }
 
 /**

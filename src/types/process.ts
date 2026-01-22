@@ -41,7 +41,11 @@ export interface Process {
 export interface State {
   name: string;
   description?: string;
-  /** この状態で必要な成果物 */
+  /**
+   * この状態で必要な成果物（artifact_type を指定）
+   * Source of Truth: この定義が正。
+   * ArtifactDefinition.required_in_states は逆引き参照用
+   */
   required_artifacts?: string[];
   /** 終端状態かどうか */
   is_final?: boolean;
@@ -55,7 +59,12 @@ export interface EventDefinition {
   description?: string;
   /** ペイロードのスキーマ（JSON Schema） */
   payload_schema?: JSONSchema;
-  /** このイベントを発行できるロール */
+  /**
+   * このイベントを発行できるロール
+   * - 空配列: 誰も発行できない（明示的な許可が必要）
+   * - ["*"]: 全ロールに許可
+   * - ["role1", "role2"]: 指定ロールのみ許可
+   */
   allowed_roles: string[];
 }
 
@@ -110,7 +119,11 @@ export interface ArtifactCountGuard {
 export interface RoleDefinition {
   name: string;
   description?: string;
-  /** 発行可能なイベント */
+  /**
+   * 発行可能なイベント（ドキュメント・参照用）
+   * 注意: 実際の権限チェックは EventDefinition.allowed_roles を Source of Truth とする
+   * この値は allowed_roles と一致していることをバリデーションで確認すること
+   */
   allowed_events: string[];
   /** 承認権限 */
   can_approve?: boolean;

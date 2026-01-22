@@ -3,7 +3,7 @@
  */
 
 // Common
-export type { JSONSchema } from "./common.js";
+export type { JSONSchema, JSONSchemaType } from "./common.js";
 
 // Process DSL
 export type {
@@ -24,6 +24,7 @@ export type {
 export type {
   RunId,
   RunEntry,
+  ParsedRunEntry,
   RunState,
   CreateRunParams,
   CreateRunResult,

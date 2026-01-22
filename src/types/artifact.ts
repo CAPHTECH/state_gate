@@ -12,7 +12,11 @@ export interface ArtifactDefinition {
   /** 成果物種別 */
   type: string;
   description?: string;
-  /** どの状態で必要か */
+  /**
+   * どの状態で必要か（逆引き参照用）
+   * 注意: Source of Truth は State.required_artifacts
+   * この値はバリデーション時に State から自動導出することを推奨
+   */
   required_in_states?: string[];
   /** どの遷移で必要か */
   required_for_transitions?: string[];
