@@ -6,7 +6,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { RunId, RunEntry, ParsedRunEntry, CSV_HEADERS } from "../types/index.js";
+import type { RunId, RunEntry, ParsedRunEntry } from "../types/index.js";
 import { withFileLock } from "./file-lock.js";
 
 /**

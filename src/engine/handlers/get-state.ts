@@ -10,7 +10,7 @@ import type {
   AllowedEvent,
   RequiredArtifact,
 } from "../../types/index.js";
-import type { StateEngine } from "../state-engine.js";
+import { StateEngineError, type StateEngine } from "../state-engine.js";
 import { evaluateGuard, type GuardEvaluationContext } from "../../guard/evaluator.js";
 import { checkArtifacts, filterPathsByArtifactType } from "../../artifact/checker.js";
 import { checkEventPermission, checkTransitionPermission } from "../../auth/role-checker.js";
@@ -27,7 +27,10 @@ export async function handleGetState(
   const process = engine.getProcess(runState.process_id);
 
   if (!process) {
-    throw new Error(`Process '${runState.process_id}' not found`);
+    throw new StateEngineError(
+      `Process '${runState.process_id}' not found`,
+      "PROCESS_NOT_FOUND"
+    );
   }
 
   // 現在状態の定義を取得

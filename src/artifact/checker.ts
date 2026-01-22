@@ -8,6 +8,43 @@ import * as fs from "node:fs/promises";
 import type { ArtifactStatus } from "../types/index.js";
 
 /**
+ * アーティファクトパス検証エラー
+ */
+export class ArtifactPathError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ArtifactPathError";
+  }
+}
+
+/**
+ * アーティファクトパスを検証（パストラバーサル防止）
+ * @param path - 検証対象のパス
+ * @throws ArtifactPathError - 不正なパスの場合
+ */
+function validateArtifactPath(path: string): void {
+  // 空パスチェック
+  if (!path || path.trim() === "") {
+    throw new ArtifactPathError("Empty artifact path");
+  }
+
+  // パストラバーサル防止（.. を含むパスを拒否）
+  if (path.includes("..")) {
+    throw new ArtifactPathError(`Path traversal detected: ${path}`);
+  }
+
+  // 絶対パス防止（/ で始まるパスを拒否）
+  if (path.startsWith("/")) {
+    throw new ArtifactPathError(`Absolute path not allowed: ${path}`);
+  }
+
+  // Windows 絶対パス防止
+  if (/^[A-Za-z]:/.test(path)) {
+    throw new ArtifactPathError(`Absolute path not allowed: ${path}`);
+  }
+}
+
+/**
  * 単一ファイルの存在チェック結果
  */
 export interface ArtifactCheckResult {
@@ -30,8 +67,10 @@ export async function checkArtifacts(
  * 単一ファイルの存在チェック
  * @param path - チェックするファイルパス
  * @returns チェック結果
+ * @throws ArtifactPathError - 不正なパスの場合
  */
 export async function checkArtifact(path: string): Promise<ArtifactCheckResult> {
+  validateArtifactPath(path);
   const status = await fileExists(path);
   return {
     path,

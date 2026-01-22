@@ -14,7 +14,6 @@ import type {
 } from "../types/index.js";
 import {
   hasAnyArtifact,
-  hasMinArtifacts,
   countPresentArtifacts,
   filterPathsByArtifactType,
 } from "../artifact/checker.js";

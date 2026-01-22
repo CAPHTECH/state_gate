@@ -9,7 +9,7 @@ import type {
   EventInfo,
   EventTransition,
 } from "../../types/index.js";
-import type { StateEngine } from "../state-engine.js";
+import { StateEngineError, type StateEngine } from "../state-engine.js";
 import { evaluateTransitionGuard, type GuardEvaluationContext } from "../../guard/evaluator.js";
 import { checkEventPermission, checkTransitionPermission } from "../../auth/role-checker.js";
 
@@ -25,7 +25,10 @@ export async function handleListEvents(
   const process = engine.getProcess(runState.process_id);
 
   if (!process) {
-    throw new Error(`Process '${runState.process_id}' not found`);
+    throw new StateEngineError(
+      `Process '${runState.process_id}' not found`,
+      "PROCESS_NOT_FOUND"
+    );
   }
 
   // 全エントリから成果物パスを収集

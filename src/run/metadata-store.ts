@@ -6,7 +6,9 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import type { RunId, RunMetadata } from "../types/index.js";
+import { withFileLock } from "./file-lock.js";
 
 /**
  * メタデータストアエラー
@@ -25,6 +27,16 @@ export class MetadataStoreError extends Error {
  * デフォルトの保存ディレクトリ
  */
 const DEFAULT_BASE_DIR = ".state_gate/metadata";
+
+/**
+ * RunMetadata の Zod スキーマ
+ * JSON ファイルの形式検証に使用
+ */
+const RunMetadataSchema = z.object({
+  run_id: z.string(),
+  process_id: z.string(),
+  created_at: z.string(),
+});
 
 /**
  * メタデータストアオプション
@@ -60,26 +72,44 @@ export class MetadataStore {
 
   /**
    * メタデータを保存
+   * ファイルロックにより競合状態を防止
    */
   async save(metadata: RunMetadata): Promise<void> {
     await this.ensureDir();
     const filePath = this.getFilePath(metadata.run_id);
-    const content = JSON.stringify(metadata, null, 2);
-    await fs.writeFile(filePath, content, "utf-8");
+
+    await withFileLock(filePath, async () => {
+      const content = JSON.stringify(metadata, null, 2);
+      await fs.writeFile(filePath, content, "utf-8");
+    });
   }
 
   /**
    * メタデータを読み込み
+   * Zod スキーマで形式を検証
    */
   async load(runId: RunId): Promise<RunMetadata | null> {
     const filePath = this.getFilePath(runId);
 
     try {
       const content = await fs.readFile(filePath, "utf-8");
-      return JSON.parse(content) as RunMetadata;
+      const parsed: unknown = JSON.parse(content);
+
+      // スキーマ検証
+      const result = RunMetadataSchema.safeParse(parsed);
+      if (!result.success) {
+        throw new MetadataStoreError(
+          `Invalid metadata format for ${runId}: ${result.error.message}`
+        );
+      }
+
+      return parsed as RunMetadata;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return null;
+      }
+      if (error instanceof MetadataStoreError) {
+        throw error;
       }
       throw new MetadataStoreError(`Failed to load metadata: ${runId}`, error);
     }
