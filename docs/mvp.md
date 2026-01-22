@@ -90,8 +90,8 @@ timestamp,state,revision,event,idempotency_key,artifact_paths
   current_state: string;
   revision: number;
   context: Record<string, unknown>;
-  missing_guards: Array<{ guard_name: string; description: string }>;
-  required_artifacts: Array<{ type: string; status: string }>;
+  missing_guards: Array<{ guard_name: string; description: string; current_status: string }>;
+  required_artifacts: Array<{ type: string; description: string; status: 'missing' | 'present' }>;
   allowed_events: Array<{ event_name: string; description: string }>;
 }
 
