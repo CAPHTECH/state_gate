@@ -80,7 +80,7 @@ timestamp,state,revision,event,idempotency_key,artifact_paths
 **最小要件**:
 - [ ] `state_gate.get_state(run_id)` - 状態取得
 - [ ] `state_gate.list_events(run_id)` - 発行可能イベント一覧
-- [ ] `state_gate.emit_event(run_id, event_name, payload, expected_revision, idempotency_key)` - イベント発行
+- [ ] `state_gate.emit_event(run_id, event_name, payload, expected_revision, idempotency_key, artifact_paths?)` - イベント発行
 
 **レスポンス仕様**:
 ```typescript

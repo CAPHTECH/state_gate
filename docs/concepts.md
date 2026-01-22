@@ -12,7 +12,7 @@ state_gate の基盤となる概念とデータモデルを定義する。
 
 ```typescript
 interface Process {
-  process_id: string;
+  id: string;             // YAML定義の id に対応
   version: string;
   name: string;
   description?: string;
