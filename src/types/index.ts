@@ -18,6 +18,9 @@ export type {
   RoleDefinition,
   KnownContextVariables,
   ContextVariables,
+  ProcessValidationResult,
+  ProcessValidationError,
+  ProcessValidationErrorCode,
 } from "./process.js";
 
 // Run 管理
@@ -28,8 +31,19 @@ export type {
   RunState,
   CreateRunParams,
   CreateRunResult,
+  ListRunsResponse,
+  RunSummary,
+  RunMetadata,
 } from "./run.js";
 export { RUN_FILE_PATTERN, CSV_HEADERS } from "./run.js";
+
+// Guard 評価
+export type {
+  GuardEvaluationResult,
+  GuardsEvaluationResult,
+  TransitionGuardInfo,
+  AvailableEventInfo,
+} from "./guard.js";
 
 // Artifact
 export type {

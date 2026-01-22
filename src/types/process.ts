@@ -211,3 +211,69 @@ export interface KnownContextVariables {
 export type ContextVariables = KnownContextVariables & {
   [key: string]: unknown;
 };
+
+// =============================================================================
+// Process バリデーション
+// =============================================================================
+
+/**
+ * Process 定義のバリデーション結果
+ */
+export interface ProcessValidationResult {
+  valid: boolean;
+  errors: ProcessValidationError[];
+}
+
+/**
+ * Process バリデーションエラー
+ */
+export interface ProcessValidationError {
+  /** エラーコード */
+  code: ProcessValidationErrorCode;
+  /** 人間可読なエラーメッセージ */
+  message: string;
+  /**
+   * エラー箇所のパス
+   * @law 形式: JSON Pointer（RFC 6901、例: "/states/0/name"）
+   */
+  path?: string;
+}
+
+/**
+ * Process バリデーションエラーコード
+ */
+export type ProcessValidationErrorCode =
+  /** 必須フィールドの欠落 */
+  | "MISSING_REQUIRED_FIELD"
+  /** 状態名の重複 */
+  | "DUPLICATE_STATE_NAME"
+  /** イベント名の重複 */
+  | "DUPLICATE_EVENT_NAME"
+  /** ロール名の重複 */
+  | "DUPLICATE_ROLE_NAME"
+  /** 成果物種別の重複 */
+  | "DUPLICATE_ARTIFACT_TYPE"
+  /** 初期状態が未定義 */
+  | "INVALID_INITIAL_STATE"
+  /** 遷移元状態が未定義 */
+  | "INVALID_TRANSITION_FROM"
+  /** 遷移先状態が未定義 */
+  | "INVALID_TRANSITION_TO"
+  /** 遷移イベントが未定義 */
+  | "INVALID_TRANSITION_EVENT"
+  /** ガード参照先が未定義 */
+  | "INVALID_GUARD_REFERENCE"
+  /** ロール参照先が未定義 */
+  | "INVALID_ROLE_REFERENCE"
+  /** ガードの成果物種別が未定義 */
+  | "INVALID_GUARD_ARTIFACT_TYPE"
+  /** 状態の必須成果物種別が未定義 */
+  | "INVALID_REQUIRED_ARTIFACT"
+  /** 到達不能な状態が存在 */
+  | "UNREACHABLE_STATE"
+  /** 終端状態が存在しない */
+  | "NO_FINAL_STATE"
+  /** allowed_roles に "*" と他のロールが混在 */
+  | "INVALID_WILDCARD_ROLE"
+  /** min_count が負の値 */
+  | "INVALID_MIN_COUNT";

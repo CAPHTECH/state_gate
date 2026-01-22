@@ -149,3 +149,56 @@ export const CSV_HEADERS = [
   "idempotency_key",
   "artifact_paths",
 ] as const satisfies readonly (keyof RunEntry)[];
+
+// =============================================================================
+// Run 一覧
+// =============================================================================
+
+/**
+ * Run 一覧レスポンス
+ */
+export interface ListRunsResponse {
+  runs: RunSummary[];
+}
+
+/**
+ * Run のサマリー情報
+ */
+export interface RunSummary {
+  run_id: RunId;
+  process_id: string;
+  /**
+   * 現在の状態
+   * @term Process.states[].name を参照
+   */
+  current_state: string;
+  revision: number;
+  /**
+   * 作成日時
+   * @law 形式: ISO 8601（例: 2025-01-22T10:00:00Z）
+   */
+  created_at: string;
+  /**
+   * 最終更新日時
+   * @law 形式: ISO 8601（例: 2025-01-22T10:00:00Z）
+   */
+  updated_at: string;
+}
+
+// =============================================================================
+// Run メタデータ
+// =============================================================================
+
+/**
+ * Run メタデータ（CSV には保存されない付加情報）
+ * .state_gate/metadata/{run_id}.json に保存
+ */
+export interface RunMetadata {
+  run_id: RunId;
+  process_id: string;
+  /**
+   * 作成日時
+   * @law 形式: ISO 8601
+   */
+  created_at: string;
+}
