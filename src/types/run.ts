@@ -1,0 +1,89 @@
+/**
+ * Run 管理の型定義
+ * @see docs/concepts.md
+ * @see docs/mvp.md
+ */
+
+import type { ContextVariables } from "./process.js";
+
+/**
+ * Run ID の形式: run-{UUIDv7}
+ * タイムスタンプ順でソート可能
+ */
+export type RunId = `run-${string}`;
+
+/**
+ * CSV の1行に対応するエントリ
+ */
+export interface RunEntry {
+  /** イベント発生日時（ISO 8601） */
+  timestamp: string;
+  /** 遷移後の状態 */
+  state: string;
+  /** 楽観ロック用の単調増加番号 */
+  revision: number;
+  /** 発生したイベント名 */
+  event: string;
+  /** 冪等性保証用キー（同一キーの再送は無視） */
+  idempotency_key: string;
+  /** 成果物パス（セミコロン区切り） */
+  artifact_paths: string;
+}
+
+/**
+ * Run の現在状態（最新行から取得）
+ *
+ * 注意: process_id と context は CSV には直接保存されない。
+ * - process_id: Run 作成時に別途管理（メタデータファイル or ファイル名規則）
+ * - context: Process 定義の initial_context から初期化、
+ *            イベントペイロードで更新される場合は別途管理が必要
+ *
+ * MVP では Run 作成時の process_id を記憶し、
+ * context は initial_context のみをサポートする。
+ */
+export interface RunState {
+  run_id: RunId;
+  /** Process 定義への参照（CSV非保存、Run作成時に決定） */
+  process_id: string;
+  current_state: string;
+  revision: number;
+  /** コンテキスト変数（CSV非保存、Process.initial_context から初期化） */
+  context: ContextVariables;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Run 作成時のパラメータ
+ */
+export interface CreateRunParams {
+  process_id: string;
+  context?: ContextVariables;
+}
+
+/**
+ * Run 作成結果
+ */
+export interface CreateRunResult {
+  run_id: RunId;
+  initial_state: string;
+  revision: number;
+}
+
+/**
+ * CSV ファイルのパス規則
+ * .state_gate/runs/{run_id}.csv
+ */
+export const RUN_FILE_PATTERN = ".state_gate/runs";
+
+/**
+ * CSV ヘッダー（固定）
+ */
+export const CSV_HEADERS = [
+  "timestamp",
+  "state",
+  "revision",
+  "event",
+  "idempotency_key",
+  "artifact_paths",
+] as const;
