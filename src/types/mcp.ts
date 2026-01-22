@@ -19,6 +19,13 @@ export interface GetStateRequest {
 export interface MissingGuard {
   guard_name: string;
   description: string;
+  /**
+   * ガードの現在状態を人間可読な形式で表現
+   * 例: "成果物 'design_doc' が未提出", "成果物数が 2/3"
+   *
+   * 注意: GuardStatus とは異なり、詳細な状態説明を提供する
+   * GuardStatus は評価結果（satisfied/unsatisfied/no_guard）を表す列挙型
+   */
   current_status: string;
 }
 
@@ -32,6 +39,10 @@ export interface GetStateResponse {
   run_id: RunId;
   process_id: string;
   process_version: string;
+  /**
+   * 現在の状態
+   * @term Process.states[].name を参照
+   */
   current_state: string;
   revision: number;
   context: ContextVariables;
@@ -41,6 +52,10 @@ export interface GetStateResponse {
   required_artifacts: RequiredArtifact[];
   /** 現在発行可能なイベント */
   allowed_events: AllowedEvent[];
+  /**
+   * 最終更新日時
+   * @law 形式: ISO 8601（例: 2025-01-22T10:00:00Z）
+   */
   updated_at: string;
 }
 
@@ -126,6 +141,10 @@ export type EventInfo = EventInfoAllowed | EventInfoBlocked;
 
 export interface ListEventsResponse {
   run_id: RunId;
+  /**
+   * 現在の状態
+   * @term Process.states[].name を参照
+   */
   current_state: string;
   events: EventInfo[];
 }
@@ -140,7 +159,11 @@ export interface EmitEventRequest {
   payload?: Record<string, unknown>;
   /** 必須: 楽観ロック */
   expected_revision: number;
-  /** 必須: 冪等性保証 */
+  /**
+   * 必須: 冪等性保証
+   * @law Run 内で一意（同一 Run 内での重複は禁止）
+   * @law 空文字列は禁止（len > 0）
+   */
   idempotency_key: string;
   /** 成果物の添付（任意） */
   artifact_paths?: string[];
@@ -224,6 +247,11 @@ export interface EmitEventError {
   details?: EmitEventErrorDetails;
 }
 
+/**
+ * イベント発行レスポンス（判別共用体）
+ * @law success === true => result は必須、error は存在しない
+ * @law success === false => error は必須、result は存在しない
+ */
 export type EmitEventResponse =
   | { success: true; result: EmitEventSuccessResult }
   | { success: false; error: EmitEventError };
@@ -236,7 +264,7 @@ export interface PreToolUseInput {
   tool_name: string;
   tool_input: Record<string, unknown>;
   /** state_gate 連携用 */
-  run_id?: string;
+  run_id?: RunId;
 }
 
 export type HookDecision = "allow" | "deny" | "ask";
@@ -245,6 +273,10 @@ export type HookDecision = "allow" | "deny" | "ask";
  * Hook コンテキスト情報
  */
 export interface HookContext {
+  /**
+   * 現在の状態
+   * @term Process.states[].name を参照
+   */
   current_state: string;
   missing_requirements?: string[];
 }

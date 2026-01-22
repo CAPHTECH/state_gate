@@ -26,17 +26,26 @@ export interface RunEntry {
    * @grounding ランタイムバリデーションで検証
    */
   timestamp: string;
-  /** 遷移後の状態 */
+  /**
+   * 遷移後の状態
+   * @term Process.states[].name を参照
+   */
   state: string;
   /**
    * 楽観ロック用の単調増加番号
    * @law revision >= 1（初期行は revision 1）
    * @law revision は行ごとに単調増加
+   * @grounding emit_event 時に前行 revision + 1 であることを検証
    */
   revision: number;
   /** 発生したイベント名 */
   event: string;
-  /** 冪等性保証用キー（同一キーの再送は無視） */
+  /**
+   * 冪等性保証用キー（同一キーの再送は無視）
+   * @law Run 内で一意（同一 Run 内での重複は禁止）
+   * @law 空文字列は禁止（len > 0）
+   * @grounding emit_event 時に履歴と照合して検証
+   */
   idempotency_key: string;
   /**
    * 成果物パス（セミコロン区切り文字列）
@@ -70,11 +79,28 @@ export interface RunState {
   run_id: RunId;
   /** Process 定義への参照（CSV非保存、Run作成時に決定） */
   process_id: string;
+  /**
+   * 現在の状態
+   * @term Process.states[].name を参照
+   */
   current_state: string;
+  /**
+   * 現在の revision
+   * @law revision >= 1
+   * @grounding CSV 最新行の revision から取得
+   */
   revision: number;
   /** コンテキスト変数（CSV非保存、Process.initial_context から初期化） */
   context: ContextVariables;
+  /**
+   * Run 作成日時
+   * @law 形式: ISO 8601（例: 2025-01-22T10:00:00Z）
+   */
   created_at: string;
+  /**
+   * 最終更新日時
+   * @law 形式: ISO 8601（例: 2025-01-22T10:00:00Z）
+   */
   updated_at: string;
 }
 
@@ -92,6 +118,10 @@ export interface CreateRunParams {
 export interface CreateRunResult {
   run_id: RunId;
   initial_state: string;
+  /**
+   * 初期 revision
+   * @law 常に 1（RunEntry.revision の初期値と一致）
+   */
   revision: number;
 }
 

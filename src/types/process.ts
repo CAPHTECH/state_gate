@@ -49,6 +49,11 @@ export type { JSONSchema } from "./common.js";
 export interface Process {
   /** YAML定義の id に対応 */
   id: string;
+  /**
+   * プロセス定義のバージョン
+   * 注意: MVP では形式検証なし、ドキュメント目的
+   * 推奨形式: セマンティックバージョニング（例: 1.0.0）
+   */
   version: string;
   name: string;
   description?: string;

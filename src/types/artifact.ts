@@ -27,7 +27,14 @@ export interface ArtifactDefinition {
    * この値はバリデーション時に State から自動導出することを推奨
    */
   required_in_states?: string[];
-  /** どの遷移で必要か */
+  /**
+   * どの遷移で必要か（ドキュメント・参照用）
+   * 遷移名は "{from}->{to}" 形式または遷移の description を使用
+   *
+   * 注意: MVP では Source of Truth を定義せず、ドキュメント目的のみ
+   * @law ∀t ∈ required_for_transitions: t は有効な遷移を指すべき
+   * @grounding 将来的にバリデーション対象とする（MVP では検証スキップ）
+   */
   required_for_transitions?: string[];
   /** スキーマ（任意） */
   schema?: JSONSchema;
