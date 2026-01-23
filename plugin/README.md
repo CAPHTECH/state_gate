@@ -29,7 +29,7 @@ It treats agents not as "smart entities that remember processes," but as **execu
 state-gate uses npx, so the npm package must be published.
 
 ```bash
-npm install -g state-gate
+npm install -g @caphtech/state-gate
 ```
 
 Or, npx will automatically download it on first execution.
@@ -161,7 +161,7 @@ Priority: `denied` > `ask` > `allowed`
 claude mcp list
 
 # Try starting manually
-npx -y state-gate serve
+npx -y @caphtech/state-gate serve
 ```
 
 ### Hooks Not Working

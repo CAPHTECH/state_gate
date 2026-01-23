@@ -148,7 +148,7 @@ When you install the plugin, the following become automatically available:
 
 ### After npm Publication
 
-The plugin uses `npx -y state-gate` internally, so you need to publish the npm package first:
+The plugin uses `npx -y @caphtech/state-gate` internally, so you need to publish the npm package first:
 
 ```bash
 npm publish

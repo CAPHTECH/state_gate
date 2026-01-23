@@ -4,7 +4,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "state-gate",
+        "@caphtech/state-gate",
         "serve"
       ]
     }

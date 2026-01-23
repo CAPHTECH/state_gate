@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2026-01-23
 
 ### Added
-- Initial public release of state_gate
+- Initial public release of state_gate (published as `@caphtech/state-gate` on npm)
 - State machine orchestration for AI agents
 - MCP (Model Context Protocol) server with tools:
   - `state_gate_get_state`: Get current state and prompt

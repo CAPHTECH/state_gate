@@ -1,5 +1,5 @@
 {
-  "name": "state-gate",
+  "name": "@caphtech/state-gate",
   "version": "0.1.0",
   "description": "State machine for AI agent workflow management",
   "type": "module",

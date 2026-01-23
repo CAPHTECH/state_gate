@@ -1,5 +1,5 @@
 {
-  "name": "state-gate",
+  "name": "@caphtech/state-gate",
   "displayName": "State Gate",
   "description": "Orchestrate AI agents with external state machines for visibility, control, and auditability",
   "version": "0.1.0",

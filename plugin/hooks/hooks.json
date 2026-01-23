@@ -5,7 +5,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "npx -y state-gate pre-tool-use"
+          "command": "npx -y @caphtech/state-gate pre-tool-use"
         }
       ]
     }
@@ -16,7 +16,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "npx -y state-gate post-tool-use"
+          "command": "npx -y @caphtech/state-gate post-tool-use"
         }
       ]
     }
@@ -27,7 +27,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "if [ -f .state_gate/state-gate.json ]; then echo ''; echo '📊 ==================== State After Compaction ===================='; npx -y state-gate get-state; echo '=================================================================='; echo ''; fi"
+          "command": "if [ -f .state_gate/state-gate.json ]; then echo ''; echo '📊 ==================== State After Compaction ===================='; npx -y @caphtech/state-gate get-state; echo '=================================================================='; echo ''; fi"
         }
       ]
     }
