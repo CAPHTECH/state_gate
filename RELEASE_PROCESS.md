@@ -128,11 +128,11 @@ Frequency: When necessary
 10. **Verify Installation**
     ```bash
     # Test global installation
-    npm install -g state-gate@0.x.0
+    npm install -g @caphtech/state-gate@0.x.0
     state-gate --version
 
     # Test npx
-    npx state-gate@0.x.0 --version
+    npx @caphtech/state-gate@0.x.0 --version
 
     # Test Claude Code plugin (if possible)
     /plugin install https://github.com/CAPHTECH/state_gate/tree/main/plugin
@@ -217,7 +217,7 @@ If a release causes critical issues:
 
 1. **Unpublish from npm** (within 72 hours)
    ```bash
-   npm unpublish state-gate@0.x.0
+   npm unpublish @caphtech/state-gate@0.x.0
    ```
 
 2. **Delete Git Tag**

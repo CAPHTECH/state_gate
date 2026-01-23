@@ -346,7 +346,7 @@ npm run build
 npm link
 
 # または直接実行
-npx state-gate <command>
+npx @caphtech/state-gate <command>
 ```
 
 **コマンド一覧**:

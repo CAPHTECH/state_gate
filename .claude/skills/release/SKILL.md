@@ -143,11 +143,11 @@ Test the published package:
 
 ```bash
 # Test global installation
-npm install -g state-gate@{VERSION}
+npm install -g @caphtech/state-gate@{VERSION}
 state-gate --version
 
 # Test npx
-npx state-gate@{VERSION} --version
+npx @caphtech/state-gate@{VERSION} --version
 ```
 
 ### 12. Post-Release Cleanup
@@ -202,7 +202,7 @@ If a release causes critical issues (within 72 hours):
 
 1. Unpublish from npm:
    ```bash
-   npm unpublish state-gate@{VERSION}
+   npm unpublish @caphtech/state-gate@{VERSION}
    ```
 
 2. Delete git tag:
