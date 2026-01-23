@@ -185,7 +185,7 @@ describe("MCP Server", () => {
         required: string[];
         properties: Record<string, unknown>;
       };
-      expect(schema.required).toContain("run_id");
+      // run_id is optional (can be loaded from .state_gate/state-gate.json)
       expect(schema.required).toContain("event_name");
       expect(schema.required).toContain("expected_revision");
       expect(schema.required).toContain("idempotency_key");

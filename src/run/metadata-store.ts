@@ -36,7 +36,7 @@ const RunMetadataSchema = z.object({
   run_id: z.string(),
   process_id: z.string(),
   created_at: z.string(),
-  context: z.record(z.unknown()),
+  context: z.record(z.unknown()).optional(),
 });
 
 /**
