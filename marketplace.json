@@ -1,13 +1,13 @@
 {
   "name": "state-gate",
   "displayName": "State Gate",
-  "description": "State machine for AI agent workflow management - orchestrate AI agents with external state machines for visibility, control, and auditability",
+  "description": "Orchestrate AI agents with external state machines for visibility, control, and auditability",
   "version": "0.1.0",
-  "repository": "https://github.com/caphtech/state_gate",
-  "author": "caphtech",
+  "repository": "https://github.com/CAPHTECH/state_gate",
+  "author": "CAPHTECH",
   "license": "MIT",
-  "homepage": "https://github.com/caphtech/state_gate#readme",
-  "bugs": "https://github.com/caphtech/state_gate/issues",
+  "homepage": "https://github.com/CAPHTECH/state_gate#readme",
+  "bugs": "https://github.com/CAPHTECH/state_gate/issues",
   "keywords": [
     "state-machine",
     "ai-agent",
@@ -28,5 +28,5 @@
   "requirements": {
     "node": ">=20.0.0"
   },
-  "documentation": "https://github.com/caphtech/state_gate/blob/main/README.md"
+  "documentation": "https://github.com/CAPHTECH/state_gate/blob/main/README.md"
 }

@@ -1,114 +1,170 @@
-process:
-  id: exploration-process
-  version: "1.0.0"
-  name: Exploration Process
-  description: Minimal exploration loop with artifact guards
-  initial_state: frame
-  initial_context:
-    exploration_mode: domain
-    team_mode: solo
+id: exploration-process
+version: "1.0.0"
+name: Exploration Process
+description: Minimal exploration loop with artifact guards and tool permissions
+initial_state: frame
 
 states:
   - name: frame
-    description: Frame the problem
-    required_artifacts: [hypothesis]
+    description: Frame the problem and form hypothesis
+    prompt: |
+      Frame the problem and form a hypothesis.
+
+      Create `evidence/hypothesis.md` with:
+      - Problem statement
+      - Initial hypothesis
+      - Expected outcome
+
+      When ready, emit 'submit_hypothesis' event with the artifact path.
+    required_artifacts:
+      - path: evidence/hypothesis.md
+    tool_permissions:
+      allowed: [Read, Glob, Grep, Write, WebSearch, WebFetch]
+      denied: [Edit, Bash]
+
   - name: experiment
-    description: Plan experiments
-    required_artifacts: [experiment_plan]
+    description: Plan experiments to test hypothesis
+    prompt: |
+      Design experiments to test your hypothesis.
+
+      Create `evidence/experiment_plan.md` with:
+      - Experiment steps
+      - What to observe
+      - Success criteria
+
+      When ready, emit 'submit_experiment_plan' event with the artifact path.
+    required_artifacts:
+      - path: evidence/experiment_plan.md
+    tool_permissions:
+      allowed: [Read, Glob, Grep, Write]
+      denied: [Edit, Bash]
+
   - name: observe
-    description: Record observations
-    required_artifacts: [observation]
+    description: Execute experiments and record observations
+    prompt: |
+      Execute your experiments and record observations.
+
+      Create `evidence/observation.md` with:
+      - What you did
+      - What you observed
+      - Raw data/results
+
+      When ready, emit 'submit_observation' event with the artifact path.
+    required_artifacts:
+      - path: evidence/observation.md
+    tool_permissions:
+      allowed: [Read, Glob, Grep, Write, Bash]
+      ask: [Edit]
+
   - name: synthesize
-    description: Synthesize findings
-    required_artifacts: [synthesis]
+    description: Synthesize findings and draw conclusions
+    prompt: |
+      Analyze your observations and synthesize findings.
+
+      Create `evidence/synthesis.md` with:
+      - Key findings
+      - Hypothesis validation (confirmed/rejected)
+      - Insights gained
+      - Next steps recommendation
+
+      When ready, emit 'submit_synthesis' event with the artifact path.
+    required_artifacts:
+      - path: evidence/synthesis.md
+    tool_permissions:
+      allowed: [Read, Glob, Grep, Write]
+
   - name: decide
-    description: Decide next step
+    description: Decide next step - iterate or complete
+    prompt: |
+      Review the synthesis and decide:
+
+      - **Iterate**: Go back to 'frame' to refine hypothesis (emit 'iterate')
+      - **Complete**: Finalize exploration (emit 'finalize')
+
+      The decision is typically made by a human or approval gate.
+    tool_permissions:
+      allowed: [Read]
+
   - name: complete
     description: Exploration complete
+    prompt: |
+      Exploration completed successfully.
+
+      All artifacts are available in the evidence/ directory.
     is_final: true
+    tool_permissions:
+      allowed: [Read]
 
 events:
   - name: submit_hypothesis
-    description: Submit a hypothesis
+    description: Submit hypothesis document
     allowed_roles: [agent, human]
-    payload_schema:
-      type: object
-      required: [hypothesis_text]
-      properties:
-        hypothesis_text:
-          type: string
+
   - name: submit_experiment_plan
-    description: Submit experiment plan
+    description: Submit experiment plan document
     allowed_roles: [agent, human]
+
   - name: submit_observation
-    description: Submit observation
+    description: Submit observation record
     allowed_roles: [agent, human]
+
   - name: submit_synthesis
-    description: Submit synthesis
+    description: Submit synthesis document
     allowed_roles: [agent, human]
+
   - name: iterate
-    description: Iterate the loop
+    description: Iterate the exploration loop
     allowed_roles: [human]
+
   - name: finalize
-    description: Finalize exploration
+    description: Finalize and complete exploration
     allowed_roles: [human]
 
 transitions:
   - from: frame
     event: submit_hypothesis
     to: experiment
-    guard: has_hypothesis
+    guards:
+      - type: artifact_exists
+        paths: ["evidence/hypothesis.md"]
+
   - from: experiment
     event: submit_experiment_plan
     to: observe
-    guard: has_experiment_plan
+    guards:
+      - type: artifact_exists
+        paths: ["evidence/experiment_plan.md"]
+
   - from: observe
     event: submit_observation
     to: synthesize
-    guard: has_observation
+    guards:
+      - type: artifact_exists
+        paths: ["evidence/observation.md"]
+
   - from: synthesize
     event: submit_synthesis
     to: decide
-    guard: has_synthesis
+    guards:
+      - type: artifact_exists
+        paths: ["evidence/synthesis.md"]
+
   - from: decide
     event: iterate
     to: frame
+
   - from: decide
     event: finalize
     to: complete
-    guard: has_synthesis
-
-guards:
-  has_hypothesis:
-    type: artifact
-    artifact_type: hypothesis
-    condition: exists
-  has_experiment_plan:
-    type: artifact
-    artifact_type: experiment_plan
-    condition: exists
-  has_observation:
-    type: artifact
-    artifact_type: observation
-    condition: count
-    min_count: 1
-  has_synthesis:
-    type: artifact
-    artifact_type: synthesis
-    condition: exists
-
-artifacts:
-  - type: hypothesis
-    description: Hypothesis text
-  - type: experiment_plan
-    description: Experiment plan
-  - type: observation
-    description: Observation record
-  - type: synthesis
-    description: Synthesis summary
+    guards:
+      - type: artifact_exists
+        paths: ["evidence/synthesis.md"]
 
 roles:
   - name: agent
+    description: AI agent performing exploration
     allowed_events: [submit_hypothesis, submit_experiment_plan, submit_observation, submit_synthesis]
+
   - name: human
+    description: Human supervisor
     allowed_events: [submit_hypothesis, submit_experiment_plan, submit_observation, submit_synthesis, iterate, finalize]

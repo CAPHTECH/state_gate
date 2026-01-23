@@ -1,36 +1,36 @@
 # state_gate
 
-AIエージェント（Claude Code 等）の開発・探索作業を、外部の状態機械（state machine）により統制・可視化・監査可能にするオーケストレーター。
+An orchestrator that governs, visualizes, and makes auditable the development and exploration work of AI agents (such as Claude Code) through external state machines.
 
-## 概要
+## Overview
 
-state_gate は、エージェントを「賢くプロセスを覚える主体」ではなく、**状態機械が要求するアクションや成果物を生成・提出する実行器**として扱う。これにより：
+state_gate treats agents not as "smart entities that remember processes," but as **executors that generate and submit actions and artifacts required by the state machine**. This enables:
 
-- プロセスの明示化と監査可能性
-- 複数エージェント/チームでの整合性確保
-- プロセス多様性を skills の増殖ではなく、状態・遷移・ガードの定義として吸収
+- Explicit processes and auditability
+- Consistency across multiple agents/teams
+- Process diversity absorbed through state/transition/guard definitions rather than proliferating skills
 
-## 主な特徴
+## Key Features
 
-- **状態駆動**: エージェントの行動は状態機械が決定
-- **証拠提出モデル**: エージェントは遷移命令ではなく証拠を提出
-- **ガード条件**: 成果物要件、機械検証、承認などで遷移を制御
-- **監査ログ**: すべてのイベントと判定結果を記録
-- **楽観ロック**: revision による並行実行の整合性確保
+- **State-Driven**: Agent behavior is determined by the state machine
+- **Evidence Submission Model**: Agents submit evidence, not transition commands
+- **Guard Conditions**: Control transitions through artifact requirements, machine verification, approvals, etc.
+- **Audit Logs**: Record all events and decision results
+- **Optimistic Locking**: Ensure consistency in concurrent execution through revision numbers
 
-## ユースケース
+## Use Cases
 
-- 探索・実装・評価・レビューを含む反復型プロセス
-- 特に**瞬作**（探索フェーズの短いループ）を主用途として想定
+- Iterative processes including exploration, implementation, evaluation, and review
+- Particularly designed for **instant prototyping** (short loops in exploration phase)
 
-## アーキテクチャ
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    Integration Layer                         │
 │  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐  │
 │  │ MCP Server  │  │ Hook Adapter │  │ HTTP API / CLI     │  │
-│  │ (対話用)     │  │ (実行面)      │  │ (汎用連携)          │  │
+│  │ (Dialog)    │  │ (Execution)  │  │ (Integration)      │  │
 │  └──────┬──────┘  └──────┬───────┘  └─────────┬──────────┘  │
 └─────────┼────────────────┼───────────────────┼──────────────┘
           │                │                   │
@@ -38,7 +38,7 @@ state_gate は、エージェントを「賢くプロセスを覚える主体」
 ┌─────────────────────────────────────────────────────────────┐
 │                      State Engine                            │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │ Process定義 → イベント受理 → ガード評価 → 遷移実行    │   │
+│  │ Process Definition → Event → Guard Eval → Transition │   │
 │  └──────────────────────────────────────────────────────┘   │
 └──────────────────────────┬──────────────────────────────────┘
                            │
@@ -46,134 +46,134 @@ state_gate は、エージェントを「賢くプロセスを覚える主体」
           ▼                ▼                ▼
 ┌────────────────┐ ┌──────────────┐ ┌──────────────────┐
 │ Artifact Store │ │ Audit/Event  │ │ Context/Run      │
-│ (成果物正本)    │ │ Log          │ │ Management       │
+│ (Source)       │ │ Log          │ │ Management       │
 └────────────────┘ └──────────────┘ └──────────────────┘
 ```
 
-## ドキュメント
+## Documentation
 
-- [アーキテクチャ](docs/architecture.md)
-- [中核概念](docs/concepts.md)
-- [Process DSL 仕様](docs/process-dsl.md)
-- [MCP インターフェース](docs/mcp-interface.md)
+- [Architecture](docs/architecture.md)
+- [Core Concepts](docs/concepts.md)
+- [Process DSL Specification](docs/process-dsl.md)
+- [MCP Interface](docs/mcp-interface.md)
 - [Hook Adapter](docs/hook-adapter.md)
-- [権限・セキュリティ](docs/security.md)
-- [MVP 要件](docs/mvp.md)
-- [サンプル](examples/exploration/README.md)
+- [Security](docs/security.md)
+- [MVP Requirements](docs/mvp.md)
+- [Examples](examples/exploration/README.md)
 
-## 設計原則
+## Design Principles
 
-1. **真実は state_gate にある** - エージェントの記憶に依存しない
-2. **遷移は state_gate が決める** - エージェントは証拠提出中心
-3. **プロセス差分は DSL に閉じ込める** - skills の増殖で吸収しない
-4. **衝突と再送は仕様で扱う** - revision / idempotency / audit
+1. **Truth lives in state_gate** - Don't rely on agent memory
+2. **state_gate decides transitions** - Agents focus on evidence submission
+3. **Process differences are contained in DSL** - Don't absorb them through skills proliferation
+4. **Handle conflicts and retries in specification** - revision / idempotency / audit
 
-## クイックスタート
+## Quick Start
 
-### ローカルで試す
+### Local Development
 
-```
+```bash
 npm install
 npm run build
 npm link
 ```
 
-```
+```bash
 mkdir -p .state_gate/processes
 cp examples/exploration/exploration-process.yaml .state_gate/processes/exploration-process.yaml
 ```
 
-```
+```bash
 state-gate create-run --process-id exploration-process
 state-gate get-state --run-id <run_id>
 state-gate list-events --run-id <run_id> --include-blocked true
 ```
 
-CLI の出力はすべて JSON です。
-ツール実行権限は各状態の `tool_permissions` で定義してください（プロセス定義内）。
-`emit-event` は artifact_paths を累積して最新行に保存します。
+All CLI output is JSON format.
+Define tool execution permissions in `tool_permissions` for each state (within process definition).
+`emit-event` accumulates artifact_paths and saves them in the latest row.
 
-詳細な手順は `examples/exploration/README.md` を参照。
+See `examples/exploration/README.md` for detailed instructions.
 
-### MCP サーバー
+### MCP Server
 
-```
+```bash
 state-gate serve --process=./path/to/process.yaml
 ```
 
 ### Hook Adapter (PreToolUse)
 
-```
+```bash
 state-gate-hook pre-tool-use --tool-name Edit --tool-input '{"path":"README.md"}'
 ```
 
-stdin 経由の入力例:
+stdin input example:
 
-```
+```bash
 echo '{"tool_name":"Edit","tool_input":{"path":"README.md"}}' | state-gate-hook pre-tool-use
 ```
 
-エラー時の挙動は `docs/hook-adapter.md` の fail-open/fail-close 設定に従います。
+Error behavior follows fail-open/fail-close settings in `docs/hook-adapter.md`.
 
-## Claude Code Plugin として使う
+## Use as Claude Code Plugin
 
-state_gateは Claude Code Plugin として配布されており、簡単にインストールできます。
+state_gate is distributed as a Claude Code Plugin and can be installed easily.
 
-### インストール方法
+### Installation
 
-#### 方法1: マーケットプレイスから（推奨）
+#### Method 1: From Marketplace (Recommended)
 
 ```bash
-# マーケットプレイスを追加
-/plugin marketplace add https://github.com/caphtech/state_gate
+# Add marketplace
+/plugin marketplace add https://github.com/CAPHTECH/state_gate
 
-# プラグインをインストール
+# Install plugin
 /plugin install state-gate
 ```
 
-#### 方法2: 直接GitHubから
+#### Method 2: Direct from GitHub
 
 ```bash
-/plugin install https://github.com/caphtech/state_gate/tree/main/plugin
+/plugin install https://github.com/CAPHTECH/state_gate/tree/main/plugin
 ```
 
-### 何がインストールされるか
+### What Gets Installed
 
-プラグインをインストールすると、以下が自動的に利用可能になります：
+When you install the plugin, the following become automatically available:
 
-- **MCP Server**: `mcp__state-gate__*` ツール群（`get_state`, `emit_event`, `list_events`, etc.）
-- **PreToolUse Hook**: ツール実行前の権限チェック（プロセス定義の `tool_permissions` に基づく）
-- **PostToolUse Hook**: イベント発行後の状態表示（新しい状態のプロンプトを自動挿入）
-- **SessionStart Hook**: コンパクション後の状態表示
+- **MCP Server**: `mcp__state-gate__*` tool suite (`get_state`, `emit_event`, `list_events`, etc.)
+- **PreToolUse Hook**: Permission checks before tool execution (based on `tool_permissions` in process definition)
+- **PostToolUse Hook**: State display after event emission (automatically inserts new state prompt)
+- **SessionStart Hook**: State display after compaction
 
-### npm公開後の使用
+### After npm Publication
 
-プラグインは内部で `npx -y state-gate` を使用するため、事前に npm パッケージを公開する必要があります：
+The plugin uses `npx -y state-gate` internally, so you need to publish the npm package first:
 
 ```bash
 npm publish
 ```
 
-公開後、ユーザーは何もインストールせずにプラグインを使用できます（npx が自動的にパッケージをダウンロード・キャッシュします）。
+After publication, users can use the plugin without any prior installation (npx automatically downloads and caches the package).
 
-### プロジェクトでの利用
+### Usage in Projects
 
-プロジェクトディレクトリで Run を作成すると、自動的に状態管理が開始されます：
+Create a Run in your project directory to automatically start state management:
 
 ```bash
-# Run作成（.state_gate/state-gate.json に保存）
+# Create Run (saved in .state_gate/state-gate.json)
 state-gate create-run --process-id exploration-process --write-config
 
-# 状態確認（MCPサーバー経由でも可能）
+# Check state (also available via MCP server)
 state-gate get-state
 ```
 
-詳細は `examples/exploration/README.md` および `CLAUDE.md` を参照してください。
+See `examples/exploration/README.md` and `CLAUDE.md` for details.
 
-## ライセンス
+## License
 
 MIT
 
-## 貢献
+## Contributing
 
-Issue や Pull Request を歓迎します。
+Issues and Pull Requests are welcome.

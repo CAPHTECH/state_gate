@@ -1,108 +1,108 @@
 # state-gate Claude Code Plugin
 
-AIエージェントの作業を外部状態機械で統制・可視化するオーケストレーター
+An orchestrator that governs, visualizes, and makes auditable AI agent workflows through external state machines.
 
-## 概要
+## Overview
 
-state-gateは、Claude CodeなどのAIエージェントの開発・探索作業を、外部の状態機械により統制・可視化・監査可能にするプラグインです。
+state-gate is a plugin that governs, visualizes, and makes auditable the development and exploration work of AI agents like Claude Code through external state machines.
 
-エージェントを「賢くプロセスを覚える主体」ではなく、**状態機械が要求するアクションや成果物を生成・提出する実行器**として扱います。
+It treats agents not as "smart entities that remember processes," but as **executors that generate and submit actions and artifacts required by the state machine**.
 
-## 主な機能
+## Key Features
 
 ### MCP Server
-- `state_gate_get_state`: 現在の状態とプロンプトを取得
-- `state_gate_emit_event`: イベントを発行して状態遷移
-- `state_gate_list_events`: 利用可能なイベント一覧
-- `state_gate_create_run`: 新しいRunを作成
-- `state_gate_list_runs`: Run一覧を取得
+- `state_gate_get_state`: Get current state and prompt
+- `state_gate_emit_event`: Emit event to transition state
+- `state_gate_list_events`: List available events
+- `state_gate_create_run`: Create a new Run
+- `state_gate_list_runs`: List all Runs
 
 ### Hooks
-- **PreToolUse**: ツール実行前の権限チェック（プロセス定義の `tool_permissions` に基づく）
-- **PostToolUse**: イベント発行後の状態表示（新しい状態のプロンプトを自動挿入）
-- **SessionStart**: コンパクション後の状態表示
+- **PreToolUse**: Permission checks before tool execution (based on `tool_permissions` in process definition)
+- **PostToolUse**: State display after event emission (automatically inserts new state prompt)
+- **SessionStart**: State display after compaction
 
-## インストール
+## Installation
 
-### 前提条件
+### Prerequisites
 
-state-gateはnpxを使用するため、npmパッケージが公開されている必要があります。
+state-gate uses npx, so the npm package must be published.
 
 ```bash
 npm install -g state-gate
 ```
 
-または、npxが初回実行時に自動的にダウンロードします。
+Or, npx will automatically download it on first execution.
 
-### Claude Codeでのインストール
+### Installation in Claude Code
 
-#### 方法1: マーケットプレイスから（推奨）
+#### Method 1: From Marketplace (Recommended)
 
 ```bash
-# マーケットプレイスを追加
-/plugin marketplace add https://github.com/caphtech/state_gate
+# Add marketplace
+/plugin marketplace add https://github.com/CAPHTECH/state_gate
 
-# プラグインをインストール
+# Install plugin
 /plugin install state-gate
 ```
 
-#### 方法2: 直接GitHubから
+#### Method 2: Direct from GitHub
 
 ```bash
-/plugin install https://github.com/caphtech/state_gate/tree/main/plugin
+/plugin install https://github.com/CAPHTECH/state_gate/tree/main/plugin
 ```
 
-## 使い方
+## Usage
 
-### 1. Runの作成
+### 1. Create a Run
 
-プロジェクトディレクトリで、プロセスに基づいたRunを作成します：
+Create a Run based on a process in your project directory:
 
 ```bash
 state-gate create-run --process-id exploration-process --write-config
 ```
 
-これにより `.state_gate/state-gate.json` にRun IDが保存され、以降のコマンドで自動的に参照されます。
+This saves the Run ID to `.state_gate/state-gate.json` and is automatically referenced in subsequent commands.
 
-### 2. 状態確認
+### 2. Check State
 
-MCPツールまたはCLIで現在の状態を確認：
+Check current state via MCP tool or CLI:
 
 ```bash
 # CLI
 state-gate get-state
 
-# Claude Code内で
-mcp__state-gate__state_gate_get_state を実行
+# In Claude Code
+Execute mcp__state-gate__state_gate_get_state
 ```
 
-### 3. 作業実行
+### 3. Perform Work
 
-現在の状態のプロンプトに従って作業を行い、成果物を作成します。
+Follow the current state's prompt to perform work and create artifacts.
 
-### 4. イベント発行
+### 4. Emit Event
 
-作業が完了したら、成果物とともにイベントを発行：
+After completing work, emit an event with artifacts:
 
 ```bash
-# MCPツールとして
-mcp__state-gate__state_gate_emit_event で以下を指定：
-- event_name: 発行するイベント名
-- expected_revision: 現在のrevision番号
-- idempotency_key: 一意なキー
-- artifact_paths: 作成した成果物のパス配列
+# As MCP tool
+Use mcp__state-gate__state_gate_emit_event and specify:
+- event_name: Event name to emit
+- expected_revision: Current revision number
+- idempotency_key: Unique key
+- artifact_paths: Array of created artifact paths
 ```
 
-### 5. 状態遷移
+### 5. State Transition
 
-state-gateがガード条件を評価し、条件を満たせば自動的に次の状態に遷移します。
-PostToolUse hookにより、新しい状態のプロンプトが自動的に表示されます。
+state_gate evaluates guard conditions and automatically transitions to the next state if conditions are met.
+The PostToolUse hook automatically displays the new state's prompt.
 
-## プロセス定義
+## Process Definition
 
-プロセスは `.state_gate/processes/*.yaml` に配置します。
+Place processes in `.state_gate/processes/*.yaml`.
 
-例: `.state_gate/processes/exploration-process.yaml`
+Example: `.state_gate/processes/exploration-process.yaml`
 
 ```yaml
 id: exploration-process
@@ -111,12 +111,12 @@ initial_state: idle
 states:
   - name: idle
     description: Waiting for task
-    prompt: "タスクを受け取り、'start' イベントを発行してください"
+    prompt: "Receive task and emit 'start' event"
     tool_permissions:
       allowed: []
   - name: exploring
     description: Exploring the codebase
-    prompt: "コードベースを探索し、exploration.mdに記録してください"
+    prompt: "Explore the codebase and record in exploration.md"
     required_artifacts:
       - path: evidence/exploration.md
     tool_permissions:
@@ -142,58 +142,58 @@ transitions:
   # ...
 ```
 
-## ツール権限制御
+## Tool Permission Control
 
-各状態で `tool_permissions` を定義すると、PreToolUse hookが自動的に権限をチェックします：
+Define `tool_permissions` in each state, and the PreToolUse hook will automatically check permissions:
 
-- `allowed`: 許可するツールのリスト
-- `denied`: 拒否するツールのリスト
-- `ask`: ユーザー確認を求めるツールのリスト
+- `allowed`: List of tools to allow
+- `denied`: List of tools to deny
+- `ask`: List of tools requiring user confirmation
 
-優先順位: `denied` > `ask` > `allowed`
+Priority: `denied` > `ask` > `allowed`
 
-## トラブルシューティング
+## Troubleshooting
 
-### MCPサーバーが起動しない
+### MCP Server Won't Start
 
 ```bash
-# MCPサーバーの状態を確認
+# Check MCP server status
 claude mcp list
 
-# 手動で起動を試す
+# Try starting manually
 npx -y state-gate serve
 ```
 
-### Hooksが動作しない
+### Hooks Not Working
 
 ```bash
-# Hooks設定を確認
+# Check hooks configuration
 cat ~/.claude/settings.json | jq '.hooks'
 
-# プラグインが正しくインストールされているか確認
+# Check if plugin is correctly installed
 /plugin list
 ```
 
-### Run IDが見つからない
+### Run ID Not Found
 
-`.state_gate/state-gate.json` が存在することを確認：
+Verify that `.state_gate/state-gate.json` exists:
 
 ```bash
 cat .state_gate/state-gate.json
 ```
 
-## 詳細情報
+## More Information
 
-- [メインREADME](../README.md)
-- [アーキテクチャ](../docs/architecture.md)
-- [Process DSL仕様](../docs/process-dsl.md)
-- [MCP インターフェース](../docs/mcp-interface.md)
+- [Main README](../README.md)
+- [Architecture](../docs/architecture.md)
+- [Process DSL Specification](../docs/process-dsl.md)
+- [MCP Interface](../docs/mcp-interface.md)
 - [Hook Adapter](../docs/hook-adapter.md)
 
-## ライセンス
+## License
 
 MIT
 
-## サポート
+## Support
 
-Issue や Pull Request は [GitHub リポジトリ](https://github.com/caphtech/state_gate)へ。
+For Issues and Pull Requests, visit the [GitHub repository](https://github.com/CAPHTECH/state_gate).
