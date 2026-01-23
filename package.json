@@ -9,18 +9,35 @@
     "state-gate": "dist/cli/index.js",
     "state-gate-hook": "dist/cli/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "vitest",
     "lint": "eslint src/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CAPHTECH/state_gate.git"
+  },
+  "homepage": "https://github.com/CAPHTECH/state_gate#readme",
+  "bugs": {
+    "url": "https://github.com/CAPHTECH/state_gate/issues"
+  },
+  "author": "CAPHTECH",
   "keywords": [
     "state-machine",
     "ai-agent",
     "mcp",
-    "workflow"
+    "workflow",
+    "claude-code",
+    "orchestration"
   ],
   "license": "MIT",
   "engines": {
