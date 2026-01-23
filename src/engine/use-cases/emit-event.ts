@@ -4,12 +4,13 @@
  */
 
 import { v7 as uuidv7 } from "uuid";
-import type { RunId, RunEntry } from "../../types/index.js";
+import type { RunId, RunEntry, ValidationError } from "../../types/index.js";
 import type { ProcessRegistry } from "../services/process-registry.js";
 import type { RunStore } from "../services/run-store.js";
 import { StateEngineError } from "../state-engine.js";
 import { evaluateTransitionGuard, type GuardEvaluationContext } from "../../guard/evaluator.js";
 import { checkEventPermission, checkTransitionPermission } from "../../auth/role-checker.js";
+import { validateArtifactPath } from "../../artifact/checker.js";
 
 /**
  * EmitEvent パラメータ
@@ -44,6 +45,8 @@ export interface EmitEventResult {
     /** 元のエントリの状態 */
     state: string;
   };
+  /** 新しい state の prompt（利用可能な場合） */
+  newStatePrompt?: string;
 }
 
 /**
@@ -88,6 +91,15 @@ export async function emitEvent(
         state: existingEntry.state,
       },
     };
+  }
+
+  const artifactValidationErrors = collectArtifactPathErrors(params.artifactPaths);
+  if (artifactValidationErrors.length > 0) {
+    throw new StateEngineError(
+      "artifact_paths contains invalid entries",
+      "INVALID_PAYLOAD",
+      { validationErrors: artifactValidationErrors }
+    );
   }
 
   // 現在状態取得
@@ -194,6 +206,19 @@ export async function emitEvent(
     artifact_paths: newArtifactPaths.join(";"),
   };
 
+  // payload を context にマージ（metadata を更新）
+  if (params.payload && Object.keys(params.payload).length > 0) {
+    const updatedContext = {
+      ...metadata.context,
+      ...params.payload,
+    };
+    const updatedMetadata: typeof metadata = {
+      ...metadata,
+      context: updatedContext,
+    };
+    await runStore.saveMetadata(updatedMetadata);
+  }
+
   // アトミックに revision 検証 + 保存（TOCTOU 競合防止）
   const appendResult = await runStore.appendEntryWithRevisionCheck(
     params.runId,
@@ -212,6 +237,13 @@ export async function emitEvent(
     );
   }
 
+  // 遷移が発生した場合、新しい state から prompt を抽出
+  let newStatePrompt: string | undefined;
+  const newStateDefinition = process.states.find(s => s.name === transition.to);
+  if (newStateDefinition?.prompt !== undefined) {
+    newStatePrompt = newStateDefinition.prompt;
+  }
+
   return {
     eventId: uuidv7(),
     accepted: true,
@@ -220,6 +252,7 @@ export async function emitEvent(
       toState: transition.to,
     },
     newRevision: newEntry.revision,
+    ...(newStatePrompt !== undefined && { newStatePrompt }),
   };
 }
 
@@ -242,4 +275,30 @@ function mergeArtifactPaths(existing: string[], added: string[]): string[] {
   }
 
   return merged;
+}
+
+function collectArtifactPathErrors(paths?: string[]): ValidationError[] {
+  if (!paths || paths.length === 0) {
+    return [];
+  }
+
+  const errors: ValidationError[] = [];
+  paths.forEach((pathValue, index) => {
+    if (typeof pathValue !== "string") {
+      errors.push({
+        path: `/artifact_paths/${index}`,
+        message: "Artifact path must be a string",
+      });
+      return;
+    }
+
+    try {
+      validateArtifactPath(pathValue);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid artifact path";
+      errors.push({ path: `/artifact_paths/${index}`, message });
+    }
+  });
+
+  return errors;
 }

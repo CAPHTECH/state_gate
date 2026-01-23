@@ -4,7 +4,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { HookContext, PreToolUseInput, PreToolUseOutput, Process, RunId } from "../types/index.js";
+import type { HookContext, PreToolUseInput, PreToolUseOutput, PostToolUseInput, PostToolUseOutput, Process, RunId } from "../types/index.js";
 import { StateEngine } from "../engine/state-engine.js";
 import { handleGetState } from "../engine/handlers/get-state.js";
 import { MetadataStore } from "../run/metadata-store.js";
@@ -53,6 +53,41 @@ export async function handlePreToolUse(
     const runId = input.run_id as RunId;
     const context = await loadHookContext(runId, options);
 
+    // 1. プロセス定義から tool_permissions を取得
+    const currentState = context.processDefinition.states.find(
+      (s) => s.name === context.current_state
+    );
+    const toolPermissions = currentState?.tool_permissions;
+
+    // 2. tool_permissions が定義されている場合はそれを使用
+    if (toolPermissions) {
+      const decision = evaluateToolPermissions(toolName, toolPermissions);
+      const hookContext: HookContext = {
+        current_state: context.current_state,
+      };
+      if (context.missing_requirements) {
+        hookContext.missing_requirements = context.missing_requirements;
+      }
+      if (decision.decision !== "allow") {
+        return {
+          ...decision,
+          context: hookContext,
+        };
+      }
+      return {
+        decision: "allow",
+        context: hookContext,
+      };
+    }
+
+    // 3. tool_permissions がない場合は hook-policy.yaml にフォールバック
+    const hookContext: HookContext = {
+      current_state: context.current_state,
+    };
+    if (context.missing_requirements) {
+      hookContext.missing_requirements = context.missing_requirements;
+    }
+
     const toolInputText = formatToolInputText(input.tool_input ?? {});
     const policyDecision = evaluateHookPolicy(policy, {
       toolName,
@@ -65,35 +100,78 @@ export async function handlePreToolUse(
         return {
           decision: "deny",
           reason: policyDecision.reason ?? "Denied by policy",
-          context,
+          context: hookContext,
         };
       }
       if (policyDecision.decision === "ask") {
         return {
           decision: "ask",
           question: policyDecision.question ?? "Confirmation required",
-          context,
+          context: hookContext,
         };
       }
       return {
         decision: "allow",
-        context,
+        context: hookContext,
       };
     }
 
     return {
       decision: "allow",
-      context,
+      context: hookContext,
     };
   } catch (error) {
     return buildErrorDecision(policy, toolName, error);
   }
 }
 
+/**
+ * プロセス定義の tool_permissions からツール実行の可否を判定
+ */
+function evaluateToolPermissions(
+  toolName: string,
+  permissions: import("../types/index.js").ToolPermissions
+): PreToolUseOutput {
+  // denied が最優先
+  if (permissions.denied && permissions.denied.includes(toolName)) {
+    return {
+      decision: "deny",
+      reason: `Tool '${toolName}' is denied in this state`,
+    };
+  }
+
+  // ask が次
+  if (permissions.ask && permissions.ask.includes(toolName)) {
+    return {
+      decision: "ask",
+      question: `Tool '${toolName}' requires confirmation in this state. Proceed?`,
+    };
+  }
+
+  // allowed があればチェック
+  if (permissions.allowed && permissions.allowed.length > 0) {
+    if (permissions.allowed.includes(toolName)) {
+      return { decision: "allow" };
+    }
+    // allowed リストにないツールは拒否
+    return {
+      decision: "deny",
+      reason: `Tool '${toolName}' is not in the allowed list for this state`,
+    };
+  }
+
+  // allowed リストが空または undefined の場合はデフォルトで許可
+  return { decision: "allow" };
+}
+
+interface ExtendedHookContext extends HookContext {
+  processDefinition: Process;
+}
+
 async function loadHookContext(
   runId: RunId,
   options: HookAdapterOptions
-): Promise<HookContext> {
+): Promise<ExtendedHookContext> {
   const metadataStore = new MetadataStore({ baseDir: options.metadataDir });
   const metadata = await metadataStore.load(runId);
   if (!metadata) {
@@ -112,8 +190,9 @@ async function loadHookContext(
     .map((guard) => guard.current_status)
     .filter((status) => status.length > 0);
 
-  const context: HookContext = {
+  const context: ExtendedHookContext = {
     current_state: state.current_state,
+    processDefinition,
   };
   if (missingRequirements.length > 0) {
     context.missing_requirements = missingRequirements;
@@ -205,4 +284,33 @@ function resolveErrorDecision(
   }
 
   return "allow";
+}
+
+/**
+ * PostToolUse handler
+ * emit_event 実行後に new_state_prompt を検出してプロンプトに挿入
+ */
+export async function handlePostToolUse(
+  input: PostToolUseInput
+): Promise<PostToolUseOutput> {
+  // mcp__state-gate__state_gate_emit_event の場合のみ処理
+  if (input.tool_name !== "mcp__state-gate__state_gate_emit_event") {
+    return {};
+  }
+
+  // tool_result から new_state_prompt を抽出
+  try {
+    const result = input.tool_result as { result?: { new_state_prompt?: string } };
+    const newStatePrompt = result?.result?.new_state_prompt;
+
+    if (newStatePrompt && typeof newStatePrompt === "string") {
+      return {
+        insertPrompt: `\n\n---\n**Next State Guidance:**\n${newStatePrompt}\n---\n`,
+      };
+    }
+  } catch {
+    // エラーは無視して空のレスポンスを返す
+  }
+
+  return {};
 }

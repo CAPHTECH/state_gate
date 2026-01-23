@@ -44,7 +44,6 @@ export async function handleListEvents(
     {
       transitions: EventTransition[];
       anyGuardSatisfied: boolean;
-      blockedReasons: string[];
     }
   >();
 
@@ -54,9 +53,15 @@ export async function handleListEvents(
     const event = process.events.find((e) => e.name === transition.event);
     if (!event) continue;
 
-    // 権限チェック
+    // 権限チェック（許可されない遷移は除外）
     const eventPermission = checkEventPermission(event, role);
+    if (!eventPermission.allowed) {
+      continue;
+    }
     const transitionPermission = checkTransitionPermission(transition, role);
+    if (!transitionPermission.allowed) {
+      continue;
+    }
 
     // ガード評価
     const guardResult = await evaluateTransitionGuard(
@@ -91,21 +96,11 @@ export async function handleListEvents(
     const existing = eventTransitionsMap.get(transition.event) ?? {
       transitions: [],
       anyGuardSatisfied: false,
-      blockedReasons: [],
     };
 
     existing.transitions.push(eventTransition);
 
-    // 権限がない場合はブロック理由を追加
-    if (!eventPermission.allowed) {
-      if (!existing.blockedReasons.includes("Permission denied")) {
-        existing.blockedReasons.push(eventPermission.reason ?? "Permission denied");
-      }
-    } else if (!transitionPermission.allowed) {
-      if (!existing.blockedReasons.includes("Transition not allowed")) {
-        existing.blockedReasons.push(transitionPermission.reason ?? "Transition not allowed");
-      }
-    } else if (guardResult.satisfied || !transition.guard) {
+    if (guardResult.satisfied || !transition.guard) {
       existing.anyGuardSatisfied = true;
     }
 
@@ -120,7 +115,7 @@ export async function handleListEvents(
     if (!event) continue;
 
     // include_blocked が false の場合、ブロックされたイベントはスキップ
-    const isBlocked = !info.anyGuardSatisfied || info.blockedReasons.length > 0;
+    const isBlocked = !info.anyGuardSatisfied;
     if (isBlocked && !request.include_blocked) continue;
 
     if (isBlocked) {
@@ -129,9 +124,7 @@ export async function handleListEvents(
         description: event.description ?? "",
         transitions: info.transitions,
         is_allowed: false,
-        blocked_reason: info.blockedReasons.length > 0
-          ? info.blockedReasons.join("; ")
-          : "Guard conditions not satisfied",
+        blocked_reason: "Guard conditions not satisfied",
       };
       if (event.payload_schema) {
         blockedEvent.payload_schema = event.payload_schema;

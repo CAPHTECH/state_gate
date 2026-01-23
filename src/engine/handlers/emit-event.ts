@@ -66,6 +66,11 @@ export async function handleEmitEvent(
       };
     }
 
+    // 新しい state の prompt を追加
+    if (result.newStatePrompt !== undefined) {
+      successResult.new_state_prompt = result.newStatePrompt;
+    }
+
     // 冪等リプレイの場合
     if (result.replayed) {
       return {
@@ -116,6 +121,10 @@ function mapStateEngineError(error: StateEngineError): EmitEventError {
   } else if (code === "GUARD_FAILED" && error.details?.guardName !== undefined) {
     errorObj.details = {
       missing_guards: [error.details.guardName],
+    };
+  } else if (code === "INVALID_PAYLOAD" && error.details?.validationErrors) {
+    errorObj.details = {
+      validation_errors: error.details.validationErrors,
     };
   }
 

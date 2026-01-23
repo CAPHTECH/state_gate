@@ -226,6 +226,30 @@ describe("StateEngine", () => {
       ).rejects.toThrow(StateEngineError);
     });
 
+    it("should reject invalid artifact paths", async () => {
+      const created = await engine.createRun({
+        processId: "simple-process",
+      });
+
+      try {
+        await engine.emitEvent({
+          runId: created.run_id,
+          eventName: "go_next",
+          expectedRevision: 1,
+          idempotencyKey: "artifact-invalid-001",
+          role: "agent",
+          artifactPaths: ["../secret.txt"],
+        });
+      } catch (error) {
+        expect(error).toBeInstanceOf(StateEngineError);
+        const engineError = error as StateEngineError;
+        expect(engineError.code).toBe("INVALID_PAYLOAD");
+        expect(engineError.details?.validationErrors?.[0]?.path).toBe(
+          "/artifact_paths/0"
+        );
+      }
+    });
+
     it("should store cumulative artifact paths in latest entry", async () => {
       const created = await engine.createRun({
         processId: "simple-process",

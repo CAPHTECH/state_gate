@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "state-gate": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "state-gate",
+        "serve"
+      ]
+    }
+  }
+}

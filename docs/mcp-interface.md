@@ -23,7 +23,7 @@ MCP は**対話面**のインターフェースとして機能し、エージェ
 **パラメータ**:
 ```typescript
 {
-  run_id: string;  // 実行ID
+  run_id?: string;  // 実行ID（省略時は .state_gate/state-gate.json を参照）
 }
 ```
 
@@ -35,6 +35,7 @@ MCP は**対話面**のインターフェースとして機能し、エージェ
   process_version: string;
 
   current_state: string;
+  current_state_prompt?: string;
   revision: number;
 
   context: Record<string, unknown>;
@@ -82,6 +83,7 @@ MCP は**対話面**のインターフェースとして機能し、エージェ
   "process_id": "exploration-process",
   "process_version": "1.0.0",
   "current_state": "experiment",
+  "current_state_prompt": "実験計画を具体化し、期待結果と手順を明文化する",
   "revision": 3,
   "context": {
     "exploration_mode": "domain",
@@ -127,7 +129,7 @@ MCP は**対話面**のインターフェースとして機能し、エージェ
 **パラメータ**:
 ```typescript
 {
-  run_id: string;
+  run_id?: string;  // 省略時は .state_gate/state-gate.json を参照
   include_blocked?: boolean;  // ガードで阻害されているイベントも含めるか
 }
 ```
@@ -215,7 +217,7 @@ MCP は**対話面**のインターフェースとして機能し、エージェ
 **パラメータ**:
 ```typescript
 {
-  run_id: string;
+  run_id?: string;  // 省略時は .state_gate/state-gate.json を参照
   event_name: string;
   payload?: Record<string, unknown>;
   expected_revision: number;     // 必須: 楽観ロック
@@ -242,6 +244,9 @@ MCP は**対話面**のインターフェースとして機能し、エージェ
     };
 
     new_revision: number;
+
+    // 新しい state の prompt（遷移が発生し、新しい state に prompt がある場合）
+    new_state_prompt?: string;
   };
 
   // 失敗時
@@ -291,6 +296,21 @@ MCP は**対話面**のインターフェースとして機能し、エージェ
       "to_state": "observe"  // ガード未充足のため状態は変わらない
     },
     "new_revision": 4
+  }
+}
+
+// レスポンス（成功、state 遷移あり）
+{
+  "success": true,
+  "result": {
+    "event_id": "01936d82-f0d5-7348-97f2-55d33fb3f2c9",
+    "accepted": true,
+    "transition": {
+      "from_state": "intake",
+      "to_state": "design"
+    },
+    "new_revision": 2,
+    "new_state_prompt": "Use the eld skill. Outline architecture, key files, and risk areas; keep plan minimal and test-aware."
   }
 }
 

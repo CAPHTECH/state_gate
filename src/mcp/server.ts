@@ -15,6 +15,7 @@ import {
 import type { RunId } from "../types/index.js";
 import { StateEngine, StateEngineError } from "../engine/state-engine.js";
 import { validateRunId } from "../run/validate-run-id.js";
+import { loadRunConfig } from "../run/run-config.js";
 
 import { handleGetState } from "../engine/handlers/get-state.js";
 import { handleListEvents } from "../engine/handlers/list-events.js";
@@ -32,6 +33,8 @@ export interface McpServerConfig {
   runsDir?: string;
   /** メタデータのディレクトリ */
   metadataDir?: string;
+  /** Run 設定ファイルのパス */
+  runConfigPath?: string;
   /** デフォルトロール */
   defaultRole?: string;
 }
@@ -95,6 +98,23 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
   }
 
   const defaultRole = config.defaultRole ?? "agent";
+  const runConfigPath = config.runConfigPath;
+
+  const resolveRunId = async (input?: {
+    run_id?: string;
+  }): Promise<RunId> => {
+    if (input?.run_id) {
+      return validateRunId(input.run_id);
+    }
+    const runConfig = await loadRunConfig(runConfigPath);
+    if (runConfig?.run_id) {
+      return validateRunId(runConfig.run_id);
+    }
+    throw new StateEngineError(
+      "run_id is required (set args.run_id or .state_gate/state-gate.json)",
+      "INVALID_INPUT"
+    );
+  };
 
   // ツール一覧
   server.setRequestHandler(ListToolsRequestSchema, async () => {
@@ -108,10 +128,10 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
             properties: {
               run_id: {
                 type: "string",
-                description: "Run ID (format: run-{uuid})",
+                description:
+                  "Run ID (format: run-{uuid}); optional when .state_gate/state-gate.json is present",
               },
             },
-            required: ["run_id"],
           },
         },
         {
@@ -122,14 +142,14 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
             properties: {
               run_id: {
                 type: "string",
-                description: "Run ID",
+                description:
+                  "Run ID; optional when .state_gate/state-gate.json is present",
               },
               include_blocked: {
                 type: "boolean",
                 description: "Include events blocked by guards",
               },
             },
-            required: ["run_id"],
           },
         },
         {
@@ -140,7 +160,8 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
             properties: {
               run_id: {
                 type: "string",
-                description: "Run ID",
+                description:
+                  "Run ID; optional when .state_gate/state-gate.json is present",
               },
               event_name: {
                 type: "string",
@@ -164,7 +185,7 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
                 description: "Paths to artifact files",
               },
             },
-            required: ["run_id", "event_name", "expected_revision", "idempotency_key"],
+            required: ["event_name", "expected_revision", "idempotency_key"],
           },
         },
         {
@@ -204,7 +225,7 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
     try {
       switch (name) {
         case "state_gate.get_state": {
-          const runId = validateRunId((args as { run_id: string }).run_id);
+          const runId = await resolveRunId(args as { run_id?: string });
           const result = await handleGetState(engine, { run_id: runId }, defaultRole);
           return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
@@ -212,9 +233,9 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
         }
 
         case "state_gate.list_events": {
-          const listArgs = args as { run_id: string; include_blocked?: boolean };
+          const listArgs = args as { run_id?: string; include_blocked?: boolean };
           const listRequest: import("../types/index.js").ListEventsRequest = {
-            run_id: validateRunId(listArgs.run_id),
+            run_id: await resolveRunId(listArgs),
           };
           if (listArgs.include_blocked !== undefined) {
             listRequest.include_blocked = listArgs.include_blocked;
@@ -227,7 +248,7 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
 
         case "state_gate.emit_event": {
           const emitArgs = args as {
-            run_id: string;
+            run_id?: string;
             event_name: string;
             payload?: Record<string, unknown>;
             expected_revision: number;
@@ -235,7 +256,7 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
             artifact_paths?: string[];
           };
           const emitRequest: import("../types/index.js").EmitEventRequest = {
-            run_id: validateRunId(emitArgs.run_id),
+            run_id: await resolveRunId(emitArgs),
             event_name: emitArgs.event_name,
             expected_revision: emitArgs.expected_revision,
             idempotency_key: emitArgs.idempotency_key,

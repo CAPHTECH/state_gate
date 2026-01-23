@@ -11,6 +11,7 @@ import type {
   ParsedRunEntry,
   ContextVariables,
   AvailableEventInfo,
+  ValidationError,
 } from "../types/index.js";
 import { ProcessRegistry } from "./services/process-registry.js";
 import { RunStore } from "./services/run-store.js";
@@ -34,6 +35,8 @@ export interface StateEngineErrorDetails {
   guardName?: string;
   /** GUARD_FAILED 時: 未充足の要件リスト */
   missingRequirements?: string[];
+  /** INVALID_PAYLOAD 時: バリデーションエラー詳細 */
+  validationErrors?: ValidationError[];
 }
 
 /**

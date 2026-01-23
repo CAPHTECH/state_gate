@@ -31,6 +31,7 @@ const JSONSchemaSchema: z.ZodType<Record<string, unknown>> = z.record(
 const StateSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
+  prompt: z.string().optional(),
   required_artifacts: z.array(z.string()).optional(),
   is_final: z.boolean().optional(),
 });
@@ -152,6 +153,7 @@ function yamlToProcess(yaml: ProcessYaml): Process {
     states: yaml.states.map((s) => ({
       name: s.name,
       ...(s.description !== undefined && { description: s.description }),
+      ...(s.prompt !== undefined && { prompt: s.prompt }),
       ...(s.required_artifacts !== undefined && { required_artifacts: s.required_artifacts }),
       ...(s.is_final !== undefined && { is_final: s.is_final }),
     })),

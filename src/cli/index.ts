@@ -16,12 +16,16 @@ import { validateProcess } from "../process/validator.js";
 import { CsvStore } from "../run/csv-store.js";
 import { MetadataStore } from "../run/metadata-store.js";
 import { isValidRunId } from "../run/validate-run-id.js";
-import { handlePreToolUse } from "../hook/adapter.js";
+import { loadRunConfig, writeRunConfig } from "../run/run-config.js";
+import { handlePreToolUse, handlePostToolUse } from "../hook/adapter.js";
 import type {
   EmitEventRequest,
   ListEventsRequest,
   Process,
   PreToolUseInput,
+  PreToolUseOutput,
+  PostToolUseInput,
+  PostToolUseOutput,
   RunId,
   RunSummary,
 } from "../types/index.js";
@@ -83,6 +87,9 @@ async function main(): Promise<void> {
       case "pre-tool-use":
         await commandPreToolUse(parsed.options, parsed.positionals);
         break;
+      case "post-tool-use":
+        await commandPostToolUse(parsed.options, parsed.positionals);
+        break;
       default:
         throw new CliError("INVALID_INPUT", `Unknown command: ${parsed.command}`);
     }
@@ -140,7 +147,12 @@ function parseArgs(args: string[]): ParsedArgs {
     addOption(options, key, true);
   }
 
-  return { command, options, positionals };
+  const parsed: ParsedArgs = {
+    options,
+    positionals,
+    ...(command !== undefined && { command }),
+  };
+  return parsed;
 }
 
 function addOption(
@@ -193,7 +205,7 @@ function outputHelp(): void {
     },
     options: {
       common: ["--runs-dir", "--metadata-dir", "--process-dir", "--role"],
-      "create-run": ["--process-id", "--context"],
+      "create-run": ["--process-id", "--context", "--write-config", "--config-path"],
       "get-state": ["--run-id"],
       "list-events": ["--run-id", "--include-blocked"],
       "emit-event": [
@@ -209,6 +221,7 @@ function outputHelp(): void {
         "--tool-input",
         "--run-id",
         "--policy-path",
+        "--config-path",
       ],
     },
     stdin: {
@@ -478,6 +491,8 @@ async function commandCreateRun(options: Record<string, OptionValue>): Promise<v
   const processId = requireStringOption(options, ["process-id"], "process_id");
   const contextValue = getStringOption(options, ["context"]);
   const context = contextValue ? parseJsonObject(contextValue, "context") : undefined;
+  const writeConfig = parseBooleanOption(options["write-config"], "write_config") ?? false;
+  const configPath = getStringOption(options, ["config-path"]);
   const { processDir, runsDir, metadataDir } = resolvePaths(options);
 
   const processDefinition = await loadProcess(processDir, processId);
@@ -485,7 +500,13 @@ async function commandCreateRun(options: Record<string, OptionValue>): Promise<v
   const engine = new StateEngine({ runsDir, metadataDir });
   engine.registerProcess(processDefinition);
 
-  const runState = await engine.createRun({ processId, context });
+  const runState = await engine.createRun({
+    processId,
+    ...(context !== undefined && { context }),
+  });
+  if (writeConfig) {
+    await writeRunConfig({ run_id: runState.run_id }, configPath);
+  }
   outputJson({
     run_id: runState.run_id,
     initial_state: runState.current_state,
@@ -667,10 +688,16 @@ async function commandPreToolUse(
     toolInputRaw
   );
 
-  const runId =
+  let runId =
     (typeof inputFromStdin?.run_id === "string" ? inputFromStdin.run_id : undefined) ??
-    getStringOption(options, ["run-id"]) ??
-    process.env.STATE_GATE_RUN_ID;
+    getStringOption(options, ["run-id"]);
+  const configPath = getStringOption(options, ["config-path"]);
+  if (!runId) {
+    const config = await loadRunConfig(configPath);
+    if (config?.run_id) {
+      runId = config.run_id;
+    }
+  }
 
   const role = resolveRole(options);
   const policyPath = getStringOption(options, ["policy-path", "policy"]);
@@ -695,10 +722,67 @@ async function commandPreToolUse(
     runsDir,
     metadataDir,
     role,
-    policyPath,
+    ...(policyPath !== undefined && { policyPath }),
   });
 
-  outputJson(response);
+  outputJson(formatPreToolUseHookOutput(response));
+}
+
+async function commandPostToolUse(
+  options: Record<string, OptionValue>,
+  positionals: string[]
+): Promise<void> {
+  const stdinPayload = await readStdin();
+  let inputFromStdin: PostToolUseInput | null = null;
+
+  if (stdinPayload) {
+    try {
+      const parsed = JSON.parse(stdinPayload) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        inputFromStdin = parsed as PostToolUseInput;
+      }
+    } catch {
+      // パースエラーは無視
+    }
+  }
+
+  const toolName =
+    (typeof inputFromStdin?.tool_name === "string" ? inputFromStdin.tool_name : undefined) ??
+    getStringOption(options, ["tool-name"]) ??
+    positionals[0];
+
+  if (!toolName) {
+    outputJson(formatPostToolUseHookOutput({}));
+    return;
+  }
+
+  const toolInputRaw = getStringOption(options, ["tool-input"]) ?? positionals[1];
+  const toolInput = normalizeToolInput(
+    toolName,
+    inputFromStdin?.tool_input,
+    toolInputRaw
+  );
+
+  const toolResultRaw = getStringOption(options, ["tool-result"]) ?? positionals[2];
+  let toolResult: unknown;
+  if (inputFromStdin?.tool_result !== undefined) {
+    toolResult = inputFromStdin.tool_result;
+  } else if (toolResultRaw) {
+    try {
+      toolResult = JSON.parse(toolResultRaw);
+    } catch {
+      toolResult = toolResultRaw;
+    }
+  }
+
+  const request: PostToolUseInput = {
+    tool_name: toolName,
+    tool_input: toolInput,
+    tool_result: toolResult,
+  };
+
+  const response = await handlePostToolUse(request);
+  outputJson(formatPostToolUseHookOutput(response));
 }
 
 main().catch((error) => {
@@ -706,3 +790,57 @@ main().catch((error) => {
   outputError("INTERNAL_ERROR", message);
   process.exit(1);
 });
+
+function formatPreToolUseHookOutput(
+  response: PreToolUseOutput
+): Record<string, unknown> {
+  const hookOutput: {
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse";
+      permissionDecision?: "allow" | "deny" | "ask";
+      permissionDecisionReason?: string;
+    };
+  } = {
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+    },
+  };
+
+  if (response.decision === "allow") {
+    hookOutput.hookSpecificOutput.permissionDecision = "allow";
+    return hookOutput;
+  }
+
+  if (response.decision === "deny") {
+    hookOutput.hookSpecificOutput.permissionDecision = "deny";
+    hookOutput.hookSpecificOutput.permissionDecisionReason =
+      response.reason ?? "Denied by policy";
+    return hookOutput;
+  }
+
+  hookOutput.hookSpecificOutput.permissionDecision = "ask";
+  hookOutput.hookSpecificOutput.permissionDecisionReason =
+    response.question ?? "Confirmation required";
+  return hookOutput;
+}
+
+function formatPostToolUseHookOutput(
+  response: PostToolUseOutput
+): Record<string, unknown> {
+  const hookOutput: {
+    hookSpecificOutput: {
+      hookEventName: "PostToolUse";
+      insertPrompt?: string;
+    };
+  } = {
+    hookSpecificOutput: {
+      hookEventName: "PostToolUse",
+    },
+  };
+
+  if (response.insertPrompt) {
+    hookOutput.hookSpecificOutput.insertPrompt = response.insertPrompt;
+  }
+
+  return hookOutput;
+}

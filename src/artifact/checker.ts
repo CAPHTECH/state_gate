@@ -22,7 +22,7 @@ export class ArtifactPathError extends Error {
  * @param path - 検証対象のパス
  * @throws ArtifactPathError - 不正なパスの場合
  */
-function validateArtifactPath(path: string): void {
+export function validateArtifactPath(path: string): void {
   // 空パスチェック
   if (!path || path.trim() === "") {
     throw new ArtifactPathError("Empty artifact path");

@@ -9,6 +9,7 @@ export type { JSONSchema, JSONSchemaType } from "./common.js";
 export type {
   Process,
   State,
+  ToolPermissions,
   EventDefinition,
   Transition,
   Guard,
@@ -78,6 +79,8 @@ export type {
   // Hook Adapter
   PreToolUseInput,
   PreToolUseOutput,
+  PostToolUseInput,
+  PostToolUseOutput,
   HookDecision,
   HookContext,
 } from "./mcp.js";

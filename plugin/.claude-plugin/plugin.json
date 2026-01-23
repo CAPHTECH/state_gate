@@ -1,0 +1,18 @@
+{
+  "name": "state-gate",
+  "version": "0.1.0",
+  "description": "State machine for AI agent workflow management",
+  "author": "caphtech",
+  "license": "MIT",
+  "repository": "https://github.com/caphtech/state_gate",
+  "keywords": [
+    "state-machine",
+    "ai-agent",
+    "mcp",
+    "workflow",
+    "orchestration"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

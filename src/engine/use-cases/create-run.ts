@@ -52,20 +52,22 @@ export async function createRun(
     artifact_paths: "",
   };
 
+  // 初期 context を計算
+  const context: ContextVariables = {
+    ...process.initial_context,
+    ...params.context,
+  };
+
   // メタデータ
   const metadata: RunMetadata = {
     run_id: runId,
     process_id: params.processId,
     created_at: now,
+    context,
   };
 
   // 保存
   await runStore.createRun(runId, initialEntry, metadata);
-
-  const context: ContextVariables = {
-    ...process.initial_context,
-    ...params.context,
-  };
 
   return {
     run_id: runId,

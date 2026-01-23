@@ -1,0 +1,438 @@
+process:
+  id: claude-code
+  version: "2.0.0"
+  name: Claude Code Workflow (Best Practices Edition)
+  description: Workflow based on Claude Code best practices (Explore → Plan → Implement → Verify)
+  initial_state: idle
+
+states:
+  - name: idle
+    description: Waiting for task request
+    prompt: |
+      タスクを待機中です。
+
+      `submit_request` イベントで payload に `{"request": "タスクの説明"}`
+      を含めて送信してください。
+    tool_permissions:
+      allowed: []  # 待機状態ではツール不要
+  - name: intake
+    description: Triage request and determine workflow path
+    prompt: |
+      受け取ったリクエストを分析して複雑さを判断してください：
+
+      **リクエスト**: {context.request}
+
+      【シンプル（計画スキップ）】
+      - タイポ、ログ行、変数名変更
+      - 1文で説明できるタスク
+      - 1-2ファイルの限定的な変更
+
+      【複雑（計画が必要）】
+      - 複数ファイルにまたがる変更
+      - 不慣れなコードパターン
+      - 複数の有効なアプローチ
+      - アーキテクチャ上の決定
+
+      出力: ゴール、制約、不明点を3つの箇条書きで要約してください。
+      必要に応じて明確化のための質問をしてください。
+
+      決定: 複雑さに基づいて 'start_simple' または 'start_planning' を発行してください。
+    tool_permissions:
+      allowed: [Read, Glob, Grep, WebSearch, WebFetch]
+      denied: [Write, Edit, Bash]
+
+  - name: explore
+    description: Understand codebase context (Plan Mode equivalent)
+    prompt: |
+      コードベースを探索して以下を理解してください：
+
+      1. どのファイルをどう変更する必要があるか
+      2. 既存のパターンと慣習
+      3. エッジケースと依存関係
+      4. テスト基盤
+
+      重要: まだ変更を加えないでください。コンテキストの収集のみ行います。
+      Read, Grep, Glob ツールを積極的に使用してください。
+
+      準備ができたら調査結果を exploration.md に出力してください。
+    required_artifacts: [exploration]
+    tool_permissions:
+      allowed: [Read, Glob, Grep, WebSearch, WebFetch, Write]  # Write は exploration.md 用
+
+  - name: plan
+    description: Design implementation approach
+    prompt: |
+      詳細な実装計画を作成してください：
+
+      1. 変更する特定のファイルをリスト化
+      2. 各ファイルの変更内容を記述
+      3. リスク領域とエッジケースを特定
+      4. 検証戦略を定義
+
+      複雑な設計には /eld スキルを使用してください。
+      計画は最小限にしつつ、テストを意識したものにしてください。
+
+      準備ができたら design.md に書き込んでください。
+    required_artifacts: [design]
+    tool_permissions:
+      allowed: [Read, Glob, Grep, Write, Edit]
+      ask: [Bash]
+
+  - name: verification_spec
+    description: Define specific verification criteria
+    prompt: |
+      具体的な検証仕様を作成してください：
+
+      【必須フォーマット】
+      - 期待される入力/出力を含むテストケース
+      - 実行する Bash コマンド（期待される結果付き）
+      - UI の場合はスクリーンショット/視覚的チェック（比較基準付き）
+      - 根本原因の検証（症状だけでなく）
+
+      例：
+        Test: validateEmail('valid@example.com') → true
+        Test: validateEmail('invalid') → false
+        Command: npm test -- email.test.ts
+        Expected: All tests pass
+
+      準備ができたら test_plan.md に書き込んでください。
+    required_artifacts: [test_plan]
+    tool_permissions:
+      allowed: [Read, Glob, Grep, Write, Edit]
+      ask: [Bash]
+
+  - name: implement
+    description: Implement changes against plan
+    prompt: |
+      計画に従って変更を実装してください：
+
+      - 計画に沿った焦点を絞った編集
+      - スコープクリープを避ける
+      - 変更を最小限かつ可逆的に保つ
+      - 計画で特定されたエッジケースに対処
+
+      完了したら 'start_verification' を発行して検証してください。
+    tool_permissions:
+      allowed: [Read, Glob, Grep, Write, Edit, Bash]
+
+  - name: verify
+    description: Execute verification and validate results
+    prompt: |
+      検証仕様を実行してください：
+
+      1. test_plan.md のすべてのテストコマンドを実行
+      2. 出力をキャプチャして期待される結果と比較
+      3. UI 変更の場合はスクリーンショットを取得（Chrome extension）
+      4. 症状ではなく根本原因を検証
+
+      重要: コンテキスト内で失敗カウントを追跡してください。
+      - 初回失敗: 'rework' を発行して修正
+      - 2回目失敗: 'needs_clear' を発行してコンテキストリセット
+
+      すべてパスしたら結果を test_results.md に書き込んでください。
+    required_artifacts: [test_results]
+    tool_permissions:
+      allowed: [Read, Glob, Grep, Bash, Write]  # Write は test_results.md 用
+      ask: [Edit]  # コード修正が必要な場合は確認
+
+  - name: rework
+    description: Fix verification failures (attempt 1)
+    prompt: |
+      特定された問題を修正してください：
+
+      - test_results.md から検証失敗をレビュー
+      - 的を絞った修正を実施
+      - スコープを拡大しない
+
+      これは試行1です。修正後、'retry_verification' を発行してください。
+    tool_permissions:
+      allowed: [Read, Glob, Grep, Write, Edit, Bash]
+
+  - name: context_reset
+    description: Clear context and restart with better prompt
+    prompt: |
+      【TWO-CORRECTION RULE 発動】
+
+      コンテキストが失敗したアプローチで汚染されている可能性があります。
+
+      アクション：
+      1. test_results.md のすべての以前の試行をレビュー
+      2. 繰り返し失敗の根本原因を特定
+      3. reset_context.md に包括的な要約を書き込む：
+         - 何を試みて、なぜ失敗したか
+         - 要件の正しい理解
+         - 次の試行のためのより良いアプローチ
+
+      ユーザーがレビューし、新しいコンテキストで実装を再開します。
+    required_artifacts: [reset_context]
+    is_terminal: true
+    tool_permissions:
+      allowed: [Read, Glob, Grep, Write]  # ドキュメント作成のみ
+
+  - name: simple_implement
+    description: Direct implementation for simple tasks
+    prompt: |
+      シンプルな変更を直接実装してください：
+
+      - 要求された変更を実施
+      - 基本的な検証を実行（tests, typecheck, build）
+      - 正式な計画は不要
+
+      完了したら simple_results.md に簡潔な要約を書き込んでください。
+    required_artifacts: [simple_results]
+    tool_permissions:
+      allowed: [Read, Glob, Grep, Write, Edit, Bash]
+
+  - name: done
+    description: Work complete
+    prompt: |
+      簡潔な変更要約を提供してください：
+
+      1. 何が実装されたか
+      2. 検証結果
+      3. フォローアップの提案があれば
+
+      該当する場合は次のステップを推奨してください。
+    is_final: true
+    tool_permissions:
+      allowed: [Read, Glob, Grep]  # 読み取りのみ
+      ask: [Write, Edit, Bash]  # 追加作業が必要な場合は確認
+
+events:
+  # Request submission
+  - name: submit_request
+    description: Submit a new task request
+    allowed_roles: [agent, human]
+
+  # Complex path
+  - name: start_planning
+    description: Complex task - begin exploration
+    allowed_roles: [agent, human]
+
+  - name: submit_exploration
+    description: Exploration complete, move to planning
+    allowed_roles: [agent, human]
+
+  - name: submit_plan
+    description: Plan approved, define verification
+    allowed_roles: [agent, human]
+
+  - name: submit_verification_spec
+    description: Verification spec approved, start implementation
+    allowed_roles: [agent, human]
+
+  # Simple path
+  - name: start_simple
+    description: Simple task - skip planning
+    allowed_roles: [agent, human]
+
+  - name: finish_simple
+    description: Simple task complete
+    allowed_roles: [agent, human]
+
+  # Common verification path
+  - name: start_verification
+    description: Implementation complete, verify results
+    allowed_roles: [agent, human]
+
+  - name: rework
+    description: Verification failed (first attempt)
+    allowed_roles: [agent, human]
+
+  - name: retry_verification
+    description: Rework complete, verify again
+    allowed_roles: [agent, human]
+
+  - name: needs_clear
+    description: Two failures - context reset needed
+    allowed_roles: [agent, human]
+
+  - name: mark_done
+    description: All verification passed, finish
+    allowed_roles: [agent, human]
+
+  - name: reset_to_idle
+    description: Reset to idle state for a new task
+    allowed_roles: [agent, human]
+
+transitions:
+  # Request submission: idle → intake
+  - from: idle
+    event: submit_request
+    to: intake
+
+  # Complex path: intake → explore → plan → verification_spec → implement → verify → done
+  - from: intake
+    event: start_planning
+    to: explore
+
+  - from: explore
+    event: submit_exploration
+    to: plan
+    guard: has_exploration
+
+  - from: plan
+    event: submit_plan
+    to: verification_spec
+    guard: has_design
+
+  - from: verification_spec
+    event: submit_verification_spec
+    to: implement
+    guard: has_test_plan
+
+  # Simple path: intake → simple_implement → done
+  - from: intake
+    event: start_simple
+    to: simple_implement
+
+  - from: simple_implement
+    event: finish_simple
+    to: done
+    guard: has_simple_results
+
+  # Common verification path
+  - from: implement
+    event: start_verification
+    to: verify
+
+  - from: verify
+    event: rework
+    to: rework
+
+  - from: rework
+    event: retry_verification
+    to: verify
+
+  - from: verify
+    event: needs_clear
+    to: context_reset
+
+  - from: verify
+    event: mark_done
+    to: done
+    guard: has_test_results
+
+  # Reset to idle from any state
+  - from: intake
+    event: reset_to_idle
+    to: idle
+
+  - from: explore
+    event: reset_to_idle
+    to: idle
+
+  - from: plan
+    event: reset_to_idle
+    to: idle
+
+  - from: verification_spec
+    event: reset_to_idle
+    to: idle
+
+  - from: implement
+    event: reset_to_idle
+    to: idle
+
+  - from: verify
+    event: reset_to_idle
+    to: idle
+
+  - from: rework
+    event: reset_to_idle
+    to: idle
+
+  - from: simple_implement
+    event: reset_to_idle
+    to: idle
+
+  - from: context_reset
+    event: reset_to_idle
+    to: idle
+
+  - from: done
+    event: reset_to_idle
+    to: idle
+
+guards:
+  has_exploration:
+    type: artifact
+    artifact_type: exploration
+    condition: exists
+
+  has_design:
+    type: artifact
+    artifact_type: design
+    condition: exists
+
+  has_test_plan:
+    type: artifact
+    artifact_type: test_plan
+    condition: exists
+
+  has_test_results:
+    type: artifact
+    artifact_type: test_results
+    condition: exists
+
+  has_simple_results:
+    type: artifact
+    artifact_type: simple_results
+    condition: exists
+
+  has_reset_context:
+    type: artifact
+    artifact_type: reset_context
+    condition: exists
+
+artifacts:
+  - type: exploration
+    description: Exploration findings (exploration.md)
+
+  - type: design
+    description: Implementation plan (design.md)
+
+  - type: test_plan
+    description: Verification specifications (test_plan.md)
+
+  - type: test_results
+    description: Verification results (test_results.md)
+
+  - type: simple_results
+    description: Simple task results (simple_results.md)
+
+  - type: reset_context
+    description: Context reset summary (reset_context.md)
+
+roles:
+  - name: agent
+    allowed_events:
+      - submit_request
+      - start_planning
+      - start_simple
+      - submit_exploration
+      - submit_plan
+      - submit_verification_spec
+      - start_verification
+      - rework
+      - retry_verification
+      - needs_clear
+      - finish_simple
+      - mark_done
+      - reset_to_idle
+
+  - name: human
+    allowed_events:
+      - submit_request
+      - start_planning
+      - start_simple
+      - submit_exploration
+      - submit_plan
+      - submit_verification_spec
+      - start_verification
+      - rework
+      - retry_verification
+      - needs_clear
+      - finish_simple
+      - mark_done
+      - reset_to_idle

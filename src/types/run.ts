@@ -201,4 +201,9 @@ export interface RunMetadata {
    * @law 形式: ISO 8601
    */
   created_at: string;
+  /**
+   * コンテキスト変数
+   * イベント payload により動的に更新される
+   */
+  context: ContextVariables;
 }

@@ -58,6 +58,8 @@ timestamp,state,revision,event,idempotency_key,artifact_paths
 interface State {
   name: string;
   description?: string;
+  // エージェントに渡すガイド文（プロンプト）
+  prompt?: string;
 
   // この状態で必要な成果物
   required_artifacts?: string[];

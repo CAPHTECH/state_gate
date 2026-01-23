@@ -42,7 +42,7 @@ export async function getRunState(
     process_id: metadata.process_id,
     current_state: latestEntry.state,
     revision: latestEntry.revision,
-    context: process.initial_context ?? {},
+    context: metadata.context ?? {},
     created_at: metadata.created_at,
     updated_at: latestEntry.timestamp,
   };

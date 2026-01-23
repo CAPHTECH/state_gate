@@ -52,6 +52,13 @@ export class RunStore {
   }
 
   /**
+   * メタデータを保存
+   */
+  async saveMetadata(metadata: RunMetadata): Promise<void> {
+    await this.metadataStore.save(metadata);
+  }
+
+  /**
    * 最新エントリを取得
    */
   async getLatestEntry(runId: RunId): Promise<ParsedRunEntry | undefined> {

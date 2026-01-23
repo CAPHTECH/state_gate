@@ -90,7 +90,7 @@ state-gate list-events --run-id <run_id> --include-blocked true
 ```
 
 CLI の出力はすべて JSON です。
-Hook policy を使う場合は `.claude/hook-policy.yaml` を配置してください。
+ツール実行権限は各状態の `tool_permissions` で定義してください（プロセス定義内）。
 `emit-event` は artifact_paths を累積して最新行に保存します。
 
 詳細な手順は `examples/exploration/README.md` を参照。
@@ -114,6 +114,61 @@ echo '{"tool_name":"Edit","tool_input":{"path":"README.md"}}' | state-gate-hook 
 ```
 
 エラー時の挙動は `docs/hook-adapter.md` の fail-open/fail-close 設定に従います。
+
+## Claude Code Plugin として使う
+
+state_gateは Claude Code Plugin として配布されており、簡単にインストールできます。
+
+### インストール方法
+
+#### 方法1: マーケットプレイスから（推奨）
+
+```bash
+# マーケットプレイスを追加
+/plugin marketplace add https://github.com/caphtech/state_gate
+
+# プラグインをインストール
+/plugin install state-gate
+```
+
+#### 方法2: 直接GitHubから
+
+```bash
+/plugin install https://github.com/caphtech/state_gate/tree/main/plugin
+```
+
+### 何がインストールされるか
+
+プラグインをインストールすると、以下が自動的に利用可能になります：
+
+- **MCP Server**: `mcp__state-gate__*` ツール群（`get_state`, `emit_event`, `list_events`, etc.）
+- **PreToolUse Hook**: ツール実行前の権限チェック（プロセス定義の `tool_permissions` に基づく）
+- **PostToolUse Hook**: イベント発行後の状態表示（新しい状態のプロンプトを自動挿入）
+- **SessionStart Hook**: コンパクション後の状態表示
+
+### npm公開後の使用
+
+プラグインは内部で `npx -y state-gate` を使用するため、事前に npm パッケージを公開する必要があります：
+
+```bash
+npm publish
+```
+
+公開後、ユーザーは何もインストールせずにプラグインを使用できます（npx が自動的にパッケージをダウンロード・キャッシュします）。
+
+### プロジェクトでの利用
+
+プロジェクトディレクトリで Run を作成すると、自動的に状態管理が開始されます：
+
+```bash
+# Run作成（.state_gate/state-gate.json に保存）
+state-gate create-run --process-id exploration-process --write-config
+
+# 状態確認（MCPサーバー経由でも可能）
+state-gate get-state
+```
+
+詳細は `examples/exploration/README.md` および `CLAUDE.md` を参照してください。
 
 ## ライセンス
 

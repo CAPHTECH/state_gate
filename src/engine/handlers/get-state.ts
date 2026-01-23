@@ -119,6 +119,9 @@ export async function handleGetState(
     process_id: runState.process_id,
     process_version: process.version,
     current_state: runState.current_state,
+    ...(currentStateDefinition?.prompt !== undefined && {
+      current_state_prompt: currentStateDefinition.prompt,
+    }),
     revision: runState.revision,
     context: runState.context,
     missing_guards: missingGuards,

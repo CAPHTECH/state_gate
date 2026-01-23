@@ -76,15 +76,37 @@ export interface Process {
 /**
  * 探索上の意味を持つ状態
  */
+/**
+ * ツール実行の許可設定
+ */
+export interface ToolPermissions {
+  /** 許可されたツール名のリスト */
+  allowed?: string[];
+  /** 拒否されたツール名のリスト */
+  denied?: string[];
+  /** ユーザーに確認を求めるツール名のリスト */
+  ask?: string[];
+}
+
 export interface State {
   name: string;
   description?: string;
+  /**
+   * エージェントに渡すガイド文（プロンプト）
+   * 例: "この状態では観察結果を記録し、根拠を添付すること"
+   */
+  prompt?: string;
   /**
    * この状態で必要な成果物（artifact_type を指定）
    * Source of Truth: この定義が正。
    * ArtifactDefinition.required_in_states は逆引き参照用
    */
   required_artifacts?: string[];
+  /**
+   * この状態で許可/拒否するツールの設定
+   * PreToolUse hook でツール実行前にチェックされる
+   */
+  tool_permissions?: ToolPermissions;
   /** 終端状態かどうか */
   is_final?: boolean;
 }

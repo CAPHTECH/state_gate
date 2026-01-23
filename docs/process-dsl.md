@@ -27,6 +27,7 @@ process:
 states:
   - name: frame
     description: 問題の枠組みを定義する
+    prompt: この状態では問題の背景と前提を整理し、仮説を言語化する
     required_artifacts: [hypothesis]
 
   - name: experiment
@@ -35,6 +36,7 @@ states:
 
   - name: observe
     description: 実験結果を観察・記録する
+    prompt: 事実と解釈を分け、観察結果と根拠を記録する
     required_artifacts: [observation]
 
   - name: synthesize

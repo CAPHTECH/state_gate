@@ -1,0 +1,32 @@
+{
+  "name": "state-gate",
+  "displayName": "State Gate",
+  "description": "State machine for AI agent workflow management - orchestrate AI agents with external state machines for visibility, control, and auditability",
+  "version": "0.1.0",
+  "repository": "https://github.com/caphtech/state_gate",
+  "author": "caphtech",
+  "license": "MIT",
+  "homepage": "https://github.com/caphtech/state_gate#readme",
+  "bugs": "https://github.com/caphtech/state_gate/issues",
+  "keywords": [
+    "state-machine",
+    "ai-agent",
+    "mcp",
+    "workflow",
+    "orchestration",
+    "claude-code",
+    "hooks"
+  ],
+  "features": [
+    "MCP Server for state management and event emission",
+    "PreToolUse hook for tool permission control",
+    "PostToolUse hook for automatic state display after transitions",
+    "SessionStart hook for state display after compaction",
+    "Process DSL for defining state machines in YAML",
+    "CLI commands for state inspection and event emission"
+  ],
+  "requirements": {
+    "node": ">=20.0.0"
+  },
+  "documentation": "https://github.com/caphtech/state_gate/blob/main/README.md"
+}

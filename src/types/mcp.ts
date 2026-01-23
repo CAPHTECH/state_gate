@@ -48,6 +48,8 @@ export interface GetStateResponse {
    * @term Process.states[].name を参照
    */
   current_state: string;
+  /** 現在の状態に紐づくプロンプト（任意） */
+  current_state_prompt?: string;
   revision: number;
   context: ContextVariables;
   /** 未充足のガード（遷移を阻害している条件） */
@@ -220,6 +222,11 @@ export interface EmitEventSuccessResult {
   accepted: true;
   transition?: EmitEventTransition;
   new_revision: number;
+  /**
+   * 新しい state の prompt（遷移が発生し、新しい state に prompt がある場合）
+   * エージェントに次のアクションをガイドするために使用
+   */
+  new_state_prompt?: string;
 }
 
 /**
@@ -359,3 +366,24 @@ export type PreToolUseOutput =
   | PreToolUseOutputAllow
   | PreToolUseOutputDeny
   | PreToolUseOutputAsk;
+
+/**
+ * PostToolUse Hook 入力
+ * ツール実行後に呼ばれる
+ */
+export interface PostToolUseInput {
+  tool_name: string;
+  tool_input: Record<string, unknown>;
+  tool_result: unknown;
+  /** state_gate 連携用 */
+  run_id?: RunId;
+}
+
+/**
+ * PostToolUse Hook 出力
+ * プロンプトに挿入するテキストを返す
+ */
+export interface PostToolUseOutput {
+  /** プロンプトに挿入するテキスト（optional） */
+  insertPrompt?: string;
+}

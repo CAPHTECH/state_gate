@@ -40,7 +40,7 @@ export interface HookPolicyDecision {
   question?: string;
 }
 
-const DEFAULT_POLICY_PATH = ".claude/hook-policy.yaml";
+const DEFAULT_POLICY_PATH = ".state_gate/hook-policy.yaml";
 
 export async function loadHookPolicy(
   policyPath?: string
