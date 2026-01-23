@@ -59,6 +59,7 @@ state_gate は、エージェントを「賢くプロセスを覚える主体」
 - [Hook Adapter](docs/hook-adapter.md)
 - [権限・セキュリティ](docs/security.md)
 - [MVP 要件](docs/mvp.md)
+- [サンプル](examples/exploration/README.md)
 
 ## 設計原則
 
@@ -69,30 +70,50 @@ state_gate は、エージェントを「賢くプロセスを覚える主体」
 
 ## クイックスタート
 
-```bash
-# インストール（予定）
-npm install state_gate
+### ローカルで試す
 
-# または
-pip install state_gate
+```
+npm install
+npm run build
+npm link
 ```
 
-```typescript
-// Process 定義の例
-const explorationProcess = {
-  states: ['frame', 'experiment', 'observe', 'synthesize', 'decide'],
-  events: ['submit_evidence', 'submit_observation', 'request_review', 'approve', 'reject'],
-  transitions: [
-    { from: 'frame', event: 'submit_evidence', to: 'experiment', guard: 'has_hypothesis' },
-    { from: 'experiment', event: 'submit_observation', to: 'observe', guard: 'has_results' },
-    // ...
-  ],
-  guards: {
-    has_hypothesis: { type: 'artifact_exists', artifact: 'hypothesis' },
-    has_results: { type: 'artifact_count', artifact: 'experiment_result', min: 1 },
-  }
-};
 ```
+mkdir -p .state_gate/processes
+cp examples/exploration/exploration-process.yaml .state_gate/processes/exploration-process.yaml
+```
+
+```
+state-gate create-run --process-id exploration-process
+state-gate get-state --run-id <run_id>
+state-gate list-events --run-id <run_id> --include-blocked true
+```
+
+CLI の出力はすべて JSON です。
+Hook policy を使う場合は `.claude/hook-policy.yaml` を配置してください。
+`emit-event` は artifact_paths を累積して最新行に保存します。
+
+詳細な手順は `examples/exploration/README.md` を参照。
+
+### MCP サーバー
+
+```
+state-gate serve --process=./path/to/process.yaml
+```
+
+### Hook Adapter (PreToolUse)
+
+```
+state-gate-hook pre-tool-use --tool-name Edit --tool-input '{"path":"README.md"}'
+```
+
+stdin 経由の入力例:
+
+```
+echo '{"tool_name":"Edit","tool_input":{"path":"README.md"}}' | state-gate-hook pre-tool-use
+```
+
+エラー時の挙動は `docs/hook-adapter.md` の fail-open/fail-close 設定に従います。
 
 ## ライセンス
 

@@ -33,9 +33,9 @@ export async function getAvailableEvents(
     );
   }
 
-  // 全エントリから成果物パスを収集
-  const entries = await runStore.readEntries(runId);
-  const artifactPaths = runStore.collectArtifactPaths(entries);
+  // 最新エントリの成果物パスを使用
+  const latestEntry = await runStore.getLatestEntry(runId);
+  const artifactPaths = latestEntry?.artifact_paths ?? [];
 
   const guardContext: GuardEvaluationContext = { artifactPaths };
 

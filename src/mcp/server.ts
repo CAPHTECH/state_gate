@@ -14,21 +14,8 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type { RunId } from "../types/index.js";
 import { StateEngine, StateEngineError } from "../engine/state-engine.js";
+import { validateRunId } from "../run/validate-run-id.js";
 
-/**
- * RunId の形式を検証（パストラバーサル防止）
- * @param id - 検証対象の文字列
- * @returns 有効な RunId
- * @throws Error - 形式が不正な場合
- */
-function validateRunId(id: string): RunId {
-  // UUIDv7 形式: run-xxxxxxxx-xxxx-7xxx-xxxx-xxxxxxxxxxxx
-  const pattern = /^run-[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  if (!pattern.test(id)) {
-    throw new Error(`Invalid run_id format: ${id}`);
-  }
-  return id as RunId;
-}
 import { handleGetState } from "../engine/handlers/get-state.js";
 import { handleListEvents } from "../engine/handlers/list-events.js";
 import { handleEmitEvent } from "../engine/handlers/emit-event.js";
@@ -53,6 +40,19 @@ export interface McpServerConfig {
  * State Gate MCP Server を作成
  */
 export async function createMcpServer(config: McpServerConfig = {}): Promise<Server> {
+  const isSilent =
+    process.env.STATE_GATE_SILENT === "1" || process.env.NODE_ENV === "test";
+  const logInfo = (...args: unknown[]) => {
+    if (!isSilent) {
+      console.error(...args);
+    }
+  };
+  const logError = (...args: unknown[]) => {
+    if (!isSilent) {
+      console.error(...args);
+    }
+  };
+
   const server = new Server(
     {
       name: "state-gate",
@@ -83,13 +83,13 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
         const process = await parseProcessFile(file);
         const validation = validateProcess(process);
         if (!validation.valid) {
-          console.error(`Invalid process file ${file}:`, validation.errors);
+          logError(`Invalid process file ${file}:`, validation.errors);
           continue;
         }
         engine.registerProcess(process);
-        console.error(`Loaded process: ${process.id}`);
+        logInfo(`Loaded process: ${process.id}`);
       } catch (error) {
-        console.error(`Failed to load process file ${file}:`, error);
+        logError(`Failed to load process file ${file}:`, error);
       }
     }
   }
@@ -328,7 +328,7 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
         errorCode = "INVALID_INPUT";
       } else {
         // 内部エラーの詳細は隠蔽し、ログに記録
-        console.error("MCP Server internal error:", error);
+        logError("MCP Server internal error:", error);
         publicMessage = "Internal server error";
         errorCode = "INTERNAL_ERROR";
       }
@@ -413,5 +413,10 @@ export async function startMcpServer(config: McpServerConfig = {}): Promise<void
   const server = await createMcpServer(config);
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("State Gate MCP server started");
+  if (
+    process.env.STATE_GATE_SILENT !== "1" &&
+    process.env.NODE_ENV !== "test"
+  ) {
+    console.error("State Gate MCP server started");
+  }
 }

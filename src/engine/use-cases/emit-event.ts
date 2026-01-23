@@ -151,10 +151,12 @@ export async function emitEvent(
     );
   }
 
-  // ガード評価
-  const allEntries = await runStore.readEntries(params.runId);
-  const currentArtifactPaths = runStore.collectArtifactPaths(allEntries);
-  const newArtifactPaths = [...currentArtifactPaths, ...(params.artifactPaths ?? [])];
+  // ガード評価（最新行の成果物リストに新規を追加）
+  const currentArtifactPaths = latestEntry.artifact_paths ?? [];
+  const newArtifactPaths = mergeArtifactPaths(
+    currentArtifactPaths,
+    params.artifactPaths ?? []
+  );
 
   const guardContext: GuardEvaluationContext = {
     artifactPaths: newArtifactPaths,
@@ -189,7 +191,7 @@ export async function emitEvent(
     revision: latestEntry.revision + 1,
     event: params.eventName,
     idempotency_key: params.idempotencyKey,
-    artifact_paths: (params.artifactPaths ?? []).join(";"),
+    artifact_paths: newArtifactPaths.join(";"),
   };
 
   // アトミックに revision 検証 + 保存（TOCTOU 競合防止）
@@ -219,4 +221,25 @@ export async function emitEvent(
     },
     newRevision: newEntry.revision,
   };
+}
+
+function mergeArtifactPaths(existing: string[], added: string[]): string[] {
+  if (existing.length === 0) {
+    return added.length > 0 ? [...added] : [];
+  }
+
+  if (added.length === 0) {
+    return [...existing];
+  }
+
+  const seen = new Set<string>();
+  const merged: string[] = [];
+
+  for (const entry of [...existing, ...added]) {
+    if (seen.has(entry)) continue;
+    seen.add(entry);
+    merged.push(entry);
+  }
+
+  return merged;
 }

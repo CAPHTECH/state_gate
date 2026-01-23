@@ -225,6 +225,37 @@ describe("StateEngine", () => {
         })
       ).rejects.toThrow(StateEngineError);
     });
+
+    it("should store cumulative artifact paths in latest entry", async () => {
+      const created = await engine.createRun({
+        processId: "simple-process",
+      });
+
+      await engine.emitEvent({
+        runId: created.run_id,
+        eventName: "go_next",
+        expectedRevision: 1,
+        idempotencyKey: "artifact-001",
+        role: "agent",
+        artifactPaths: ["./evidence/hypothesis.md"],
+      });
+
+      await engine.emitEvent({
+        runId: created.run_id,
+        eventName: "finish",
+        expectedRevision: 2,
+        idempotencyKey: "artifact-002",
+        role: "agent",
+        artifactPaths: ["./evidence/plan.md"],
+      });
+
+      const history = await engine.getEventHistory(created.run_id);
+      expect(history[1]?.artifact_paths).toEqual(["./evidence/hypothesis.md"]);
+      expect(history[2]?.artifact_paths).toEqual([
+        "./evidence/hypothesis.md",
+        "./evidence/plan.md",
+      ]);
+    });
   });
 
   describe("listRuns", () => {

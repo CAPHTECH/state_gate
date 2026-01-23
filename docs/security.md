@@ -86,6 +86,8 @@ roles:
 
 Hook/エージェントから state_gate への送信内容は、原則として**ファイルパス参照**中心にする。
 
+artifact_paths は相対パスのみ許可され、`..` や絶対パスは拒否される。
+
 ```typescript
 // 良い例: ファイルパスで参照を送信
 emit_event({

@@ -176,6 +176,17 @@ policies:
         - "git diff"
 ```
 
+CLI オプションとの対応:
+
+| CLI オプション | 環境変数 | 説明 |
+|---------------|----------|------|
+| `--policy-path` | `STATE_GATE_POLICY_PATH` | Hook policy のパス |
+| `--run-id` | `STATE_GATE_RUN_ID` | 現在の Run ID |
+| `--role` | `STATE_GATE_ROLE` | 現在のロール |
+| `--process-dir` | `STATE_GATE_PROCESS_DIR` | Process 定義のディレクトリ |
+| `--runs-dir` | `STATE_GATE_RUNS_DIR` | Run CSV のディレクトリ |
+| `--metadata-dir` | `STATE_GATE_METADATA_DIR` | Run metadata のディレクトリ |
+
 ---
 
 ## Claude Code hooks 設定例
@@ -306,6 +317,7 @@ npx state-gate <command>
 | `list-events` | 発行可能イベント一覧 |
 | `emit-event` | イベント発行 |
 | `list-runs` | Run一覧 |
+| `pre-tool-use` | PreToolUse フックの判定 |
 
 **使用例**:
 ```bash
@@ -325,6 +337,90 @@ state-gate emit-event \
   --expected-revision <n> \
   --idempotency-key <key> \
   --artifact-paths "./evidence/obs1.md"
+
+# PreToolUse の判定（JSON出力）
+state-gate-hook pre-tool-use \
+  --tool-name Edit \
+  --tool-input '{"path":"README.md"}' \
+  --run-id <run_id>
 ```
 
 **出力**: 全コマンドJSON形式で出力
+
+### stdin での入力例
+
+Claude Code hooks からは JSON が stdin で渡される前提のため、
+以下のように標準入力で渡す運用も可能。
+
+```bash
+echo '{
+  "tool_name": "Edit",
+  "tool_input": { "path": "README.md" },
+  "run_id": "run-xxxxxxxx-xxxx-7xxx-xxxx-xxxxxxxxxxxx"
+}' | state-gate-hook pre-tool-use
+```
+
+`run_id` が未指定の場合は常に allow を返す。
+
+---
+
+## Claude Code integration runbook
+
+1) Build and link the CLI
+
+```bash
+npm install
+npm run build
+npm link
+```
+
+2) Install the process definition used by your project
+
+```bash
+mkdir -p .state_gate/processes
+cp ./path/to/process.yaml .state_gate/processes/<process_id>.yaml
+```
+
+3) Create a run and export the run id
+
+```bash
+state-gate create-run --process-id <process_id>
+```
+
+```bash
+export STATE_GATE_RUN_ID=<run_id>
+export STATE_GATE_ROLE=agent
+```
+
+4) (Optional) Add a hook policy
+
+```bash
+mkdir -p .claude
+cp ./path/to/hook-policy.yaml .claude/hook-policy.yaml
+```
+
+5) Configure Claude Code hooks
+
+`.claude/hooks.json`:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": { "tool_name": "*" },
+        "hooks": [
+          {
+            "type": "command",
+            "command": "state-gate-hook pre-tool-use"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Notes
+- `state-gate-hook pre-tool-use` consumes JSON from stdin, so it works with the hook payload directly.
+- If you want to override the policy path, set `STATE_GATE_POLICY_PATH` before launching Claude Code.

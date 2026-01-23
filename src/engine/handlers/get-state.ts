@@ -38,9 +38,10 @@ export async function handleGetState(
     (s) => s.name === runState.current_state
   );
 
-  // 全エントリから成果物パスを収集
+  // 最新エントリの成果物パスを使用
   const entries = await engine.getEventHistory(request.run_id);
-  const artifactPaths = entries.flatMap((e) => e.artifact_paths);
+  const latestEntry = entries.length > 0 ? entries[entries.length - 1] : undefined;
+  const artifactPaths = latestEntry?.artifact_paths ?? [];
 
   const guardContext: GuardEvaluationContext = { artifactPaths };
 

@@ -47,6 +47,7 @@ timestamp,state,revision,event,idempotency_key,artifact_paths
 - 履歴は自然に残る（追記方式）
 - RFC 4180 準拠（カンマ・改行・ダブルクォートを含む値はダブルクォートで囲む）
 - `artifact_paths` は複数パスをセミコロン区切りで格納
+- `artifact_paths` の最新行を成果物一覧として扱う（emit_event は累積を保持）
 - `idempotency_key` は冪等性保証用（同一キーの再送は無視）
 
 ### State（状態）

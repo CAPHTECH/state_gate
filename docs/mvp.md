@@ -22,13 +22,13 @@ MVP では以下を実現する:
 状態・イベント・遷移・ガード・権限を定義できる。
 
 **最小要件**:
-- [ ] YAML 形式での Process 定義
-- [ ] 状態の定義（name, description, is_final）
-- [ ] イベントの定義（name, payload_schema, allowed_roles）
-- [ ] 遷移の定義（from, event, to, guard）
-- [ ] ガードの定義（artifact 存在チェック・件数チェック）
-- [ ] ロールの定義（agent, human, reviewer）
-- [ ] Process 定義の検証（必須フィールド、参照整合性）
+- [x] YAML 形式での Process 定義
+- [x] 状態の定義（name, description, is_final）
+- [x] イベントの定義（name, payload_schema, allowed_roles）
+- [x] 遷移の定義（from, event, to, guard）
+- [x] ガードの定義（artifact 存在チェック・件数チェック）
+- [x] ロールの定義（agent, human, reviewer）
+- [x] Process 定義の検証（必須フィールド、参照整合性）
 
 **スコープ外（v0.2以降）**:
 - 階層状態（HFSM）
@@ -41,10 +41,10 @@ MVP では以下を実現する:
 Process を適用した実行単位を管理する。
 
 **最小要件**:
-- [ ] Run の作成（process_id）
-- [ ] Run の状態取得（最新行を読む）
-- [ ] Run の一覧取得
-- [ ] revision の管理（楽観ロック）
+- [x] Run の作成（process_id）
+- [x] Run の状態取得（最新行を読む）
+- [x] Run の一覧取得
+- [x] revision の管理（楽観ロック）
 
 **データ形式（CSV追記方式）**:
 
@@ -78,9 +78,9 @@ timestamp,state,revision,event,idempotency_key,artifact_paths
 エージェントとの対話用インターフェース。
 
 **最小要件**:
-- [ ] `state_gate.get_state(run_id)` - 状態取得
-- [ ] `state_gate.list_events(run_id)` - 発行可能イベント一覧
-- [ ] `state_gate.emit_event(run_id, event_name, payload, expected_revision, idempotency_key, artifact_paths?)` - イベント発行
+- [x] `state_gate.get_state(run_id)` - 状態取得
+- [x] `state_gate.list_events(run_id)` - 発行可能イベント一覧
+- [x] `state_gate.emit_event(run_id, event_name, payload, expected_revision, idempotency_key, artifact_paths?)` - イベント発行
 
 **レスポンス仕様**:
 ```typescript
@@ -116,9 +116,9 @@ timestamp,state,revision,event,idempotency_key,artifact_paths
 成果物の参照を管理する。
 
 **最小要件**:
-- [ ] Artifact パスの登録（CSV の artifact_paths 列に追記）
-- [ ] Artifact ファイルの存在確認
-- [ ] Run に紐づく Artifact の一覧取得（最新行の artifact_paths を解析）
+- [x] Artifact パスの登録（CSV の artifact_paths 列に追記）
+- [x] Artifact ファイルの存在確認
+- [x] Run に紐づく Artifact の一覧取得（最新行の artifact_paths を解析）
 
 Artifact は CSV の `artifact_paths` 列にセミコロン区切りで保存。
 ファイルの実在確認がガード条件となる。
@@ -132,11 +132,11 @@ Artifact は CSV の `artifact_paths` 列にセミコロン区切りで保存。
 Claude Code hooks との連携。
 
 **最小要件**:
-- [ ] PreToolUse フックの実装
+- [x] PreToolUse フックの実装
   - 状態取得
   - ポリシー評価（シンプルな許可/拒否）
   - allow/deny の返却
-- [ ] CLI コマンド（出力は全てJSON）
+- [x] CLI コマンド（出力は全てJSON）
 
 **CLI コマンド詳細**:
 
@@ -147,6 +147,7 @@ Claude Code hooks との連携。
 | `list-events` | 発行可能イベント一覧 |
 | `emit-event` | イベント発行 |
 | `list-runs` | Run一覧 |
+| `pre-tool-use` | PreToolUse 判定 |
 
 ```bash
 # Run作成
@@ -233,7 +234,7 @@ state_gate/
 │           └── list-runs.ts
 ├── examples/
 │   └── exploration/
-│       ├── process.yaml     # サンプル Process 定義
+│       ├── exploration-process.yaml     # サンプル Process 定義
 │       └── README.md
 └── tests/
     ├── core/
@@ -281,25 +282,25 @@ MVP は以下を満たすとき完了とする:
 
 ### 機能テスト
 
-- [ ] YAML で定義した Process を読み込める
-- [ ] Run を作成し、初期状態を取得できる
-- [ ] MCP 経由でイベントを発行できる
-- [ ] ガード条件（Artifact 存在）が評価される
-- [ ] ガード充足時に状態遷移が発生する
-- [ ] revision 不一致で拒否される
-- [ ] 権限不足で拒否される
+- [x] YAML で定義した Process を読み込める
+- [x] Run を作成し、初期状態を取得できる
+- [x] MCP 経由でイベントを発行できる
+- [x] ガード条件（Artifact 存在）が評価される
+- [x] ガード充足時に状態遷移が発生する
+- [x] revision 不一致で拒否される
+- [x] 権限不足で拒否される
 
 ### 統合テスト
 
 - [ ] Claude Code から MCP 経由で状態を取得できる
 - [ ] Claude Code から MCP 経由でイベントを発行できる
-- [ ] Hook Adapter が PreToolUse で許可/拒否を返せる
+- [x] Hook Adapter が PreToolUse で許可/拒否を返せる
 
 ### ドキュメント
 
-- [ ] README に使い方が記載されている
-- [ ] サンプル Process 定義がある
-- [ ] MCP Tools のリファレンスがある
+- [x] README に使い方が記載されている
+- [x] サンプル Process 定義がある
+- [x] MCP Tools のリファレンスがある
 
 ---
 

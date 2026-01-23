@@ -111,13 +111,12 @@ export class RunStore {
   }
 
   /**
-   * 全エントリから成果物パスを収集
+   * 最新エントリから成果物パスを取得
    */
   collectArtifactPaths(entries: ParsedRunEntry[]): string[] {
-    const paths: string[] = [];
-    for (const entry of entries) {
-      paths.push(...entry.artifact_paths);
+    if (entries.length === 0) {
+      return [];
     }
-    return paths;
+    return entries[entries.length - 1]?.artifact_paths ?? [];
   }
 }

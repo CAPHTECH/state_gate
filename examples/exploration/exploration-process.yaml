@@ -1,0 +1,114 @@
+process:
+  id: exploration-process
+  version: "1.0.0"
+  name: Exploration Process
+  description: Minimal exploration loop with artifact guards
+  initial_state: frame
+  initial_context:
+    exploration_mode: domain
+    team_mode: solo
+
+states:
+  - name: frame
+    description: Frame the problem
+    required_artifacts: [hypothesis]
+  - name: experiment
+    description: Plan experiments
+    required_artifacts: [experiment_plan]
+  - name: observe
+    description: Record observations
+    required_artifacts: [observation]
+  - name: synthesize
+    description: Synthesize findings
+    required_artifacts: [synthesis]
+  - name: decide
+    description: Decide next step
+  - name: complete
+    description: Exploration complete
+    is_final: true
+
+events:
+  - name: submit_hypothesis
+    description: Submit a hypothesis
+    allowed_roles: [agent, human]
+    payload_schema:
+      type: object
+      required: [hypothesis_text]
+      properties:
+        hypothesis_text:
+          type: string
+  - name: submit_experiment_plan
+    description: Submit experiment plan
+    allowed_roles: [agent, human]
+  - name: submit_observation
+    description: Submit observation
+    allowed_roles: [agent, human]
+  - name: submit_synthesis
+    description: Submit synthesis
+    allowed_roles: [agent, human]
+  - name: iterate
+    description: Iterate the loop
+    allowed_roles: [human]
+  - name: finalize
+    description: Finalize exploration
+    allowed_roles: [human]
+
+transitions:
+  - from: frame
+    event: submit_hypothesis
+    to: experiment
+    guard: has_hypothesis
+  - from: experiment
+    event: submit_experiment_plan
+    to: observe
+    guard: has_experiment_plan
+  - from: observe
+    event: submit_observation
+    to: synthesize
+    guard: has_observation
+  - from: synthesize
+    event: submit_synthesis
+    to: decide
+    guard: has_synthesis
+  - from: decide
+    event: iterate
+    to: frame
+  - from: decide
+    event: finalize
+    to: complete
+    guard: has_synthesis
+
+guards:
+  has_hypothesis:
+    type: artifact
+    artifact_type: hypothesis
+    condition: exists
+  has_experiment_plan:
+    type: artifact
+    artifact_type: experiment_plan
+    condition: exists
+  has_observation:
+    type: artifact
+    artifact_type: observation
+    condition: count
+    min_count: 1
+  has_synthesis:
+    type: artifact
+    artifact_type: synthesis
+    condition: exists
+
+artifacts:
+  - type: hypothesis
+    description: Hypothesis text
+  - type: experiment_plan
+    description: Experiment plan
+  - type: observation
+    description: Observation record
+  - type: synthesis
+    description: Synthesis summary
+
+roles:
+  - name: agent
+    allowed_events: [submit_hypothesis, submit_experiment_plan, submit_observation, submit_synthesis]
+  - name: human
+    allowed_events: [submit_hypothesis, submit_experiment_plan, submit_observation, submit_synthesis, iterate, finalize]

@@ -44,3 +44,10 @@ export { handleEmitEvent } from "./engine/index.js";
 
 // MCP
 export { createMcpServer, startMcpServer } from "./mcp/index.js";
+
+// Hook
+export {
+  handlePreToolUse,
+  loadHookPolicy,
+  evaluateHookPolicy,
+} from "./hook/index.js";

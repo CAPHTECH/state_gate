@@ -6,7 +6,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "state-gate": "dist/cli/index.js"
+    "state-gate": "dist/cli/index.js",
+    "state-gate-hook": "dist/cli/index.js"
   },
   "scripts": {
     "build": "tsc",

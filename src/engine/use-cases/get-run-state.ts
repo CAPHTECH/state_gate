@@ -37,10 +37,6 @@ export async function getRunState(
     );
   }
 
-  // 全エントリから成果物パスを収集（将来の拡張用）
-  const entries = await runStore.readEntries(runId);
-  runStore.collectArtifactPaths(entries);
-
   return {
     run_id: runId,
     process_id: metadata.process_id,

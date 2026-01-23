@@ -53,6 +53,8 @@ MCP は**対話面**のインターフェースとして機能し、エージェ
     status: 'missing' | 'present';  // MVP: ファイル存在チェックのみ
   }>;
 
+  // artifact_paths は CSV 最新行の値を参照（emit_event で累積される）
+
   // 現在発行可能なイベント
   allowed_events: Array<{
     event_name: string;
