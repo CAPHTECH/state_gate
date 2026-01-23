@@ -27,7 +27,21 @@ Run all checks to ensure quality:
 npm run build && npm test && npm run typecheck && npm run lint
 ```
 
-If any checks fail, stop and fix issues before proceeding.
+**If any checks fail:**
+
+1. Fix the issues (code, tests, types, or lint errors)
+2. Rebuild and re-run all checks:
+   ```bash
+   npm run build && npm test && npm run typecheck && npm run lint
+   ```
+3. Commit the fixes:
+   ```bash
+   git add .
+   git commit -m "fix: resolve pre-release validation issues"
+   ```
+4. Repeat steps 1-3 until all checks pass
+
+Only proceed to the next step when all validation checks pass successfully.
 
 ### 2. Create Release Branch
 
