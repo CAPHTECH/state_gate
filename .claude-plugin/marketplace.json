@@ -1,4 +1,5 @@
 {
+  "name": "caphtech-state-gate",
   "owner": {
     "name": "CAPHTECH",
     "url": "https://github.com/CAPHTECH"
@@ -6,9 +7,8 @@
   "plugins": [
     {
       "name": "state-gate",
-      "displayName": "State Gate",
       "description": "Orchestrate AI agents with external state machines for visibility, control, and auditability",
-      "source": "../plugin"
+      "path": "plugin"
     }
   ]
 }
