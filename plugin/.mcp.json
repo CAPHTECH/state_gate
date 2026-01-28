@@ -6,7 +6,10 @@
         "-y",
         "@caphtech/state-gate",
         "serve"
-      ]
+      ],
+      "env": {
+        "STATE_GATE_PROJECT_ROOT": "${PWD}"
+      }
     }
   }
 }

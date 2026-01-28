@@ -1,6 +1,6 @@
 {
   "name": "state-gate",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "State machine for AI agent workflow management",
   "author": {
     "name": "CAPHTECH",

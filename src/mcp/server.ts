@@ -4,6 +4,7 @@
  * @see docs/mcp-interface.md
  */
 
+import * as path from "node:path";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -22,6 +23,15 @@ import { handleListEvents } from "../engine/handlers/list-events.js";
 import { handleEmitEvent } from "../engine/handlers/emit-event.js";
 import { parseProcessFile } from "../process/parser.js";
 import { validateProcess } from "../process/validator.js";
+
+/**
+ * プロジェクトルートを取得
+ * 環境変数 STATE_GATE_PROJECT_ROOT が設定されていればそれを使用、
+ * そうでなければ process.cwd() を使用
+ */
+function getProjectRoot(): string {
+  return process.env.STATE_GATE_PROJECT_ROOT || process.cwd();
+}
 
 /**
  * MCP Server 設定
@@ -70,14 +80,18 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
   );
 
   // State Engine を初期化
-  const engineOptions: { runsDir?: string; metadataDir?: string } = {};
-  if (config.runsDir !== undefined) {
-    engineOptions.runsDir = config.runsDir;
-  }
-  if (config.metadataDir !== undefined) {
-    engineOptions.metadataDir = config.metadataDir;
-  }
+  // 環境変数からプロジェクトルートを取得し、デフォルトのディレクトリパスを構築
+  const projectRoot = getProjectRoot();
+  const stateGateDir = path.join(projectRoot, ".state_gate");
+
+  const engineOptions: { runsDir?: string; metadataDir?: string; processDir?: string } = {
+    runsDir: config.runsDir ?? path.join(stateGateDir, "runs"),
+    metadataDir: config.metadataDir ?? path.join(stateGateDir, "metadata"),
+    processDir: path.join(stateGateDir, "processes"),
+  };
   const engine = new StateEngine(engineOptions);
+
+  logInfo(`Project root: ${projectRoot}`);
 
   // プロセス定義を読み込み
   if (config.processFiles) {
@@ -98,7 +112,8 @@ export async function createMcpServer(config: McpServerConfig = {}): Promise<Ser
   }
 
   const defaultRole = config.defaultRole ?? "agent";
-  const runConfigPath = config.runConfigPath;
+  // runConfigPath が未指定の場合はプロジェクトルートを基準に設定
+  const runConfigPath = config.runConfigPath ?? path.join(stateGateDir, "state-gate.json");
 
   const resolveRunId = async (input?: {
     run_id?: string;
