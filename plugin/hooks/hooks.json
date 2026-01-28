@@ -1,35 +1,37 @@
 {
-  "PreToolUse": [
-    {
-      "matcher": "Read|Write|Edit|Glob|Grep|Bash|WebSearch|WebFetch",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "npx -y @caphtech/state-gate pre-tool-use"
-        }
-      ]
-    }
-  ],
-  "PostToolUse": [
-    {
-      "matcher": "mcp__state-gate__state_gate_emit_event",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "npx -y @caphtech/state-gate post-tool-use"
-        }
-      ]
-    }
-  ],
-  "SessionStart": [
-    {
-      "matcher": "compact",
-      "hooks": [
-        {
-          "type": "command",
-          "command": "if [ -f .state_gate/state-gate.json ]; then echo ''; echo '📊 ==================== State After Compaction ===================='; npx -y @caphtech/state-gate get-state; echo '=================================================================='; echo ''; fi"
-        }
-      ]
-    }
-  ]
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Write|Edit|Glob|Grep|Bash|WebSearch|WebFetch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @caphtech/state-gate pre-tool-use"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp__state-gate__state_gate_emit_event",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx -y @caphtech/state-gate post-tool-use"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f .state_gate/state-gate.json ]; then echo ''; echo '📊 ==================== State After Compaction ===================='; npx -y @caphtech/state-gate get-state; echo '=================================================================='; echo ''; fi"
+          }
+        ]
+      }
+    ]
+  }
 }
