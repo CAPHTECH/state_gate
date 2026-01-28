@@ -1,14 +1,17 @@
 {
   "name": "caphtech-state-gate",
+  "version": "0.1.0",
+  "description": "State Gate plugin marketplace for AI agent workflow orchestration",
   "owner": {
     "name": "CAPHTECH",
-    "url": "https://github.com/CAPHTECH"
+    "email": "support@caphtech.com"
   },
   "plugins": [
     {
       "name": "state-gate",
       "description": "Orchestrate AI agents with external state machines for visibility, control, and auditability",
-      "path": "plugin"
+      "source": "./plugin",
+      "category": "productivity"
     }
   ]
 }
