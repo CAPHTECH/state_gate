@@ -1,6 +1,6 @@
 {
   "name": "caphtech-state-gate",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "State Gate plugin marketplace for AI agent workflow orchestration",
   "owner": {
     "name": "CAPHTECH",
