@@ -141,29 +141,20 @@ export async function emitEvent(
     );
   }
 
-  // 該当する遷移を検索
+  // 該当する遷移を検索（複数遷移のフォールバックをサポート）
   const currentState = latestEntry.state;
-  const transition = process.transitions.find(
+  const matchingTransitions = process.transitions.filter(
     (t) => t.from === currentState && t.event === params.eventName
   );
 
-  if (!transition) {
+  if (matchingTransitions.length === 0) {
     throw new StateEngineError(
       `No transition defined for event '${params.eventName}' from state '${currentState}'`,
       "INVALID_EVENT"
     );
   }
 
-  // 遷移権限チェック
-  const transitionPermission = checkTransitionPermission(transition, params.role);
-  if (!transitionPermission.allowed) {
-    throw new StateEngineError(
-      transitionPermission.reason ?? "Permission denied",
-      "FORBIDDEN"
-    );
-  }
-
-  // ガード評価（最新行の成果物リストに新規を追加）
+  // ガード評価用コンテキストを準備
   const currentArtifactPaths = latestEntry.artifact_paths ?? [];
   const newArtifactPaths = mergeArtifactPaths(
     currentArtifactPaths,
@@ -175,26 +166,80 @@ export async function emitEvent(
     context: metadata.context,
   };
 
-  const guardResult = await evaluateTransitionGuard(
-    process.guards,
-    transition.guard,
-    guardContext
-  );
+  // 遷移選択ルール:
+  // 1. ガード付き遷移を先に評価
+  // 2. ガードが満たされた最初の遷移を選択
+  // 3. すべてのガード付き遷移が失敗した場合、ガードなし遷移を選択
+  const guardedTransitions = matchingTransitions.filter((t) => t.guard !== undefined);
+  const guardlessTransitions = matchingTransitions.filter((t) => t.guard === undefined);
 
-  if (!guardResult.satisfied) {
-    const errorDetails: import("../state-engine.js").StateEngineErrorDetails = {};
-    if (transition.guard !== undefined) {
-      errorDetails.guardName = transition.guard;
+  let selectedTransition: typeof matchingTransitions[0] | undefined;
+  let lastGuardFailure: { guardName: string; missingRequirements?: string[] } | undefined;
+
+  // ガード付き遷移を評価
+  for (const transition of guardedTransitions) {
+    // 遷移権限チェック
+    const transitionPermission = checkTransitionPermission(transition, params.role);
+    if (!transitionPermission.allowed) {
+      continue; // 権限がない遷移はスキップ
     }
-    if (guardResult.missing_requirements !== undefined) {
-      errorDetails.missingRequirements = guardResult.missing_requirements;
+
+    const guardResult = await evaluateTransitionGuard(
+      process.guards,
+      transition.guard,
+      guardContext
+    );
+
+    if (guardResult.satisfied) {
+      selectedTransition = transition;
+      break;
+    } else {
+      // 最後のガード失敗を記録（エラーメッセージ用）
+      const failure: { guardName: string; missingRequirements?: string[] } = {
+        guardName: transition.guard!,
+      };
+      if (guardResult.missing_requirements !== undefined) {
+        failure.missingRequirements = guardResult.missing_requirements;
+      }
+      lastGuardFailure = failure;
     }
+  }
+
+  // ガード付き遷移が見つからない場合、ガードなし遷移を試す
+  if (!selectedTransition && guardlessTransitions.length > 0) {
+    for (const transition of guardlessTransitions) {
+      const transitionPermission = checkTransitionPermission(transition, params.role);
+      if (transitionPermission.allowed) {
+        selectedTransition = transition;
+        break;
+      }
+    }
+  }
+
+  // 遷移が見つからない場合
+  if (!selectedTransition) {
+    // ガード失敗が原因の場合
+    if (lastGuardFailure) {
+      const errorDetails: import("../state-engine.js").StateEngineErrorDetails = {
+        guardName: lastGuardFailure.guardName,
+      };
+      if (lastGuardFailure.missingRequirements !== undefined) {
+        errorDetails.missingRequirements = lastGuardFailure.missingRequirements;
+      }
+      throw new StateEngineError(
+        `Guard '${lastGuardFailure.guardName}' not satisfied: ${lastGuardFailure.missingRequirements?.join(", ")}`,
+        "GUARD_FAILED",
+        errorDetails
+      );
+    }
+    // 権限がない場合
     throw new StateEngineError(
-      `Guard '${transition.guard}' not satisfied: ${guardResult.missing_requirements?.join(", ")}`,
-      "GUARD_FAILED",
-      errorDetails
+      "Permission denied for all available transitions",
+      "FORBIDDEN"
     );
   }
+
+  const transition = selectedTransition;
 
   // 新しいエントリを作成
   const now = new Date().toISOString();
