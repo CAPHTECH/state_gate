@@ -162,17 +162,18 @@ export function filterPathsByArtifactType(
   paths: string[],
   artifactType: string
 ): string[] {
+  const lowerArtifactType = artifactType.toLowerCase();
   return paths.filter((p) => {
     // パスのベース名から拡張子を除いた部分を取得
     const baseName = p.split("/").pop() ?? "";
-    const nameWithoutExt = baseName.replace(/\.[^.]+$/, "");
-    // artifact_type が含まれるかチェック（区切り文字で明確に区切られている場合のみ）
+    const nameWithoutExt = baseName.replace(/\.[^.]+$/, "").toLowerCase();
+    // artifact_type が含まれるかチェック（case-insensitive、区切り文字で明確に区切られている場合のみ）
     return (
-      nameWithoutExt === artifactType ||
-      nameWithoutExt.startsWith(`${artifactType}_`) ||
-      nameWithoutExt.startsWith(`${artifactType}-`) ||
-      nameWithoutExt.endsWith(`_${artifactType}`) ||
-      nameWithoutExt.endsWith(`-${artifactType}`)
+      nameWithoutExt === lowerArtifactType ||
+      nameWithoutExt.startsWith(`${lowerArtifactType}_`) ||
+      nameWithoutExt.startsWith(`${lowerArtifactType}-`) ||
+      nameWithoutExt.endsWith(`_${lowerArtifactType}`) ||
+      nameWithoutExt.endsWith(`-${lowerArtifactType}`)
     );
   });
 }
