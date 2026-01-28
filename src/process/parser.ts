@@ -52,6 +52,10 @@ const TransitionSchema = z.object({
   description: z.string().optional(),
 });
 
+// =============================================================================
+// ArtifactGuard スキーマ
+// =============================================================================
+
 const ArtifactExistsGuardSchema = z.object({
   type: z.literal("artifact"),
   artifact_type: z.string().min(1),
@@ -65,7 +69,73 @@ const ArtifactCountGuardSchema = z.object({
   min_count: z.number().int().min(0),
 });
 
-const GuardSchema = z.union([ArtifactExistsGuardSchema, ArtifactCountGuardSchema]);
+// =============================================================================
+// ContextGuard スキーマ
+// =============================================================================
+
+const ContextPrimitiveValueSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.null(),
+]);
+
+const ContextEqualsGuardSchema = z.object({
+  type: z.literal("context"),
+  variable: z.string().min(1),
+  condition: z.literal("equals"),
+  value: ContextPrimitiveValueSchema,
+});
+
+const ContextNotEqualsGuardSchema = z.object({
+  type: z.literal("context"),
+  variable: z.string().min(1),
+  condition: z.literal("not_equals"),
+  value: ContextPrimitiveValueSchema,
+});
+
+const ContextInGuardSchema = z.object({
+  type: z.literal("context"),
+  variable: z.string().min(1),
+  condition: z.literal("in"),
+  value: z.array(ContextPrimitiveValueSchema).min(1),
+});
+
+const ContextNotInGuardSchema = z.object({
+  type: z.literal("context"),
+  variable: z.string().min(1),
+  condition: z.literal("not_in"),
+  value: z.array(ContextPrimitiveValueSchema).min(1),
+});
+
+const ContextExistsGuardSchema = z.object({
+  type: z.literal("context"),
+  variable: z.string().min(1),
+  condition: z.literal("exists"),
+});
+
+const ContextNotExistsGuardSchema = z.object({
+  type: z.literal("context"),
+  variable: z.string().min(1),
+  condition: z.literal("not_exists"),
+});
+
+// =============================================================================
+// Guard 統合スキーマ
+// =============================================================================
+
+const GuardSchema = z.union([
+  // ArtifactGuard
+  ArtifactExistsGuardSchema,
+  ArtifactCountGuardSchema,
+  // ContextGuard
+  ContextEqualsGuardSchema,
+  ContextNotEqualsGuardSchema,
+  ContextInGuardSchema,
+  ContextNotInGuardSchema,
+  ContextExistsGuardSchema,
+  ContextNotExistsGuardSchema,
+]);
 
 const ArtifactDefinitionSchema = z.object({
   type: z.string().min(1),

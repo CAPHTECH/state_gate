@@ -10,6 +10,7 @@ import type {
   ProcessValidationError,
   ProcessValidationErrorCode,
   ArtifactCountGuard,
+  Guard,
 } from "../types/index.js";
 
 /**
@@ -136,31 +137,7 @@ export function validateProcess(process: Process): ProcessValidationResult {
   // ガードの検証
   Object.entries(process.guards).forEach(([name, guard]) => {
     const basePath = `/guards/${name}`;
-
-    // artifact_type の検証
-    if (!artifactTypes.has(guard.artifact_type)) {
-      errors.push(
-        createError(
-          "INVALID_GUARD_ARTIFACT_TYPE",
-          `Guard '${name}' references undefined artifact type '${guard.artifact_type}'`,
-          `${basePath}/artifact_type`
-        )
-      );
-    }
-
-    // min_count の検証（count 条件の場合）
-    if (guard.condition === "count") {
-      const countGuard = guard as ArtifactCountGuard;
-      if (countGuard.min_count < 0) {
-        errors.push(
-          createError(
-            "INVALID_MIN_COUNT",
-            `Guard '${name}' has negative min_count: ${countGuard.min_count}`,
-            `${basePath}/min_count`
-          )
-        );
-      }
-    }
+    validateGuard(name, guard, basePath, artifactTypes, errors);
   });
 
   // 状態の required_artifacts 検証
@@ -328,6 +305,70 @@ function validateReachability(
       );
     }
   });
+}
+
+/**
+ * ガードの検証
+ */
+function validateGuard(
+  name: string,
+  guard: Guard,
+  basePath: string,
+  artifactTypes: Set<string>,
+  errors: ProcessValidationError[]
+): void {
+  if (guard.type === "artifact") {
+    // ArtifactGuard の検証
+    if (!artifactTypes.has(guard.artifact_type)) {
+      errors.push(
+        createError(
+          "INVALID_GUARD_ARTIFACT_TYPE",
+          `Guard '${name}' references undefined artifact type '${guard.artifact_type}'`,
+          `${basePath}/artifact_type`
+        )
+      );
+    }
+
+    // min_count の検証（count 条件の場合）
+    if (guard.condition === "count") {
+      const countGuard = guard as ArtifactCountGuard;
+      if (countGuard.min_count < 0) {
+        errors.push(
+          createError(
+            "INVALID_MIN_COUNT",
+            `Guard '${name}' has negative min_count: ${countGuard.min_count}`,
+            `${basePath}/min_count`
+          )
+        );
+      }
+    }
+  } else if (guard.type === "context") {
+    // ContextGuard の検証
+    // condition と value の整合性を検証
+    switch (guard.condition) {
+      case "equals":
+      case "not_equals":
+        // value はプリミティブ値が必須（スキーマで検証済み）
+        break;
+      case "in":
+      case "not_in":
+        // value は配列が必須（スキーマで検証済み）
+        if (!Array.isArray(guard.value) || guard.value.length === 0) {
+          errors.push(
+            createError(
+              "INVALID_CONTEXT_GUARD_VALUE",
+              `Guard '${name}' with condition '${guard.condition}' requires a non-empty array value`,
+              `${basePath}/value`
+            )
+          );
+        }
+        break;
+      case "exists":
+      case "not_exists":
+        // value は不要（存在する場合はエラーではないが無視される）
+        break;
+    }
+  }
 }
 
 /**

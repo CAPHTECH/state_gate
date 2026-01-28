@@ -37,7 +37,10 @@ export async function getAvailableEvents(
   const latestEntry = await runStore.getLatestEntry(runId);
   const artifactPaths = latestEntry?.artifact_paths ?? [];
 
-  const guardContext: GuardEvaluationContext = { artifactPaths };
+  const guardContext: GuardEvaluationContext = {
+    artifactPaths,
+    context: state.context,
+  };
 
   // 現在状態からの遷移を持つイベントをグループ化
   const eventTransitions = new Map<string, TransitionGuardInfo[]>();

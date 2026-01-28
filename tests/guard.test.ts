@@ -8,7 +8,17 @@ import {
   evaluateGuards,
   evaluateTransitionGuard,
 } from "../src/guard/evaluator.js";
-import type { Guard, ArtifactExistsGuard, ArtifactCountGuard } from "../src/types/index.js";
+import type {
+  Guard,
+  ArtifactExistsGuard,
+  ArtifactCountGuard,
+  ContextEqualsGuard,
+  ContextNotEqualsGuard,
+  ContextInGuard,
+  ContextNotInGuard,
+  ContextExistsGuard,
+  ContextNotExistsGuard,
+} from "../src/types/index.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
@@ -223,6 +233,421 @@ describe("Guard Evaluator", () => {
 
       expect(result.satisfied).toBe(false);
       expect(result.missing_requirements?.some((r) => r.includes("not defined"))).toBe(true);
+    });
+  });
+
+  // =============================================================================
+  // ContextGuard テスト
+  // =============================================================================
+
+  describe("evaluateGuard - context equals condition", () => {
+    it("should satisfy when context variable equals expected value", async () => {
+      const guard: ContextEqualsGuard = {
+        type: "context",
+        variable: "complexity",
+        condition: "equals",
+        value: "high",
+      };
+
+      const result = await evaluateGuard("is_complex", guard, {
+        artifactPaths: [],
+        context: { complexity: "high" },
+      });
+
+      expect(result.satisfied).toBe(true);
+      expect(result.guard_name).toBe("is_complex");
+    });
+
+    it("should not satisfy when context variable does not equal expected value", async () => {
+      const guard: ContextEqualsGuard = {
+        type: "context",
+        variable: "complexity",
+        condition: "equals",
+        value: "high",
+      };
+
+      const result = await evaluateGuard("is_complex", guard, {
+        artifactPaths: [],
+        context: { complexity: "low" },
+      });
+
+      expect(result.satisfied).toBe(false);
+      expect(result.missing_requirements?.some((r) => r.includes("low"))).toBe(true);
+    });
+
+    it("should not satisfy when context variable is not defined (L3)", async () => {
+      const guard: ContextEqualsGuard = {
+        type: "context",
+        variable: "complexity",
+        condition: "equals",
+        value: "high",
+      };
+
+      const result = await evaluateGuard("is_complex", guard, {
+        artifactPaths: [],
+        context: {},
+      });
+
+      expect(result.satisfied).toBe(false);
+      expect(result.missing_requirements?.some((r) => r.includes("not defined"))).toBe(true);
+    });
+
+    it("should handle null value correctly", async () => {
+      const guard: ContextEqualsGuard = {
+        type: "context",
+        variable: "status",
+        condition: "equals",
+        value: null,
+      };
+
+      const result = await evaluateGuard("is_null", guard, {
+        artifactPaths: [],
+        context: { status: null },
+      });
+
+      expect(result.satisfied).toBe(true);
+    });
+
+    it("should handle boolean value correctly", async () => {
+      const guard: ContextEqualsGuard = {
+        type: "context",
+        variable: "enabled",
+        condition: "equals",
+        value: true,
+      };
+
+      const result = await evaluateGuard("is_enabled", guard, {
+        artifactPaths: [],
+        context: { enabled: true },
+      });
+
+      expect(result.satisfied).toBe(true);
+    });
+
+    it("should handle number value correctly", async () => {
+      const guard: ContextEqualsGuard = {
+        type: "context",
+        variable: "count",
+        condition: "equals",
+        value: 42,
+      };
+
+      const result = await evaluateGuard("is_42", guard, {
+        artifactPaths: [],
+        context: { count: 42 },
+      });
+
+      expect(result.satisfied).toBe(true);
+    });
+  });
+
+  describe("evaluateGuard - context not_equals condition", () => {
+    it("should satisfy when context variable does not equal value", async () => {
+      const guard: ContextNotEqualsGuard = {
+        type: "context",
+        variable: "complexity",
+        condition: "not_equals",
+        value: "high",
+      };
+
+      const result = await evaluateGuard("not_complex", guard, {
+        artifactPaths: [],
+        context: { complexity: "low" },
+      });
+
+      expect(result.satisfied).toBe(true);
+    });
+
+    it("should not satisfy when context variable equals value", async () => {
+      const guard: ContextNotEqualsGuard = {
+        type: "context",
+        variable: "complexity",
+        condition: "not_equals",
+        value: "high",
+      };
+
+      const result = await evaluateGuard("not_complex", guard, {
+        artifactPaths: [],
+        context: { complexity: "high" },
+      });
+
+      expect(result.satisfied).toBe(false);
+    });
+
+    it("should not satisfy when context variable is not defined (L3)", async () => {
+      const guard: ContextNotEqualsGuard = {
+        type: "context",
+        variable: "complexity",
+        condition: "not_equals",
+        value: "high",
+      };
+
+      const result = await evaluateGuard("not_complex", guard, {
+        artifactPaths: [],
+        context: {},
+      });
+
+      expect(result.satisfied).toBe(false);
+      expect(result.missing_requirements?.some((r) => r.includes("not defined"))).toBe(true);
+    });
+  });
+
+  describe("evaluateGuard - context in condition", () => {
+    it("should satisfy when context variable is in array", async () => {
+      const guard: ContextInGuard = {
+        type: "context",
+        variable: "team_mode",
+        condition: "in",
+        value: ["team", "async"],
+      };
+
+      const result = await evaluateGuard("is_team_work", guard, {
+        artifactPaths: [],
+        context: { team_mode: "team" },
+      });
+
+      expect(result.satisfied).toBe(true);
+    });
+
+    it("should not satisfy when context variable is not in array", async () => {
+      const guard: ContextInGuard = {
+        type: "context",
+        variable: "team_mode",
+        condition: "in",
+        value: ["team", "async"],
+      };
+
+      const result = await evaluateGuard("is_team_work", guard, {
+        artifactPaths: [],
+        context: { team_mode: "solo" },
+      });
+
+      expect(result.satisfied).toBe(false);
+      expect(result.missing_requirements?.some((r) => r.includes("solo"))).toBe(true);
+    });
+
+    it("should not satisfy when context variable is not defined (L3)", async () => {
+      const guard: ContextInGuard = {
+        type: "context",
+        variable: "team_mode",
+        condition: "in",
+        value: ["team", "async"],
+      };
+
+      const result = await evaluateGuard("is_team_work", guard, {
+        artifactPaths: [],
+        context: {},
+      });
+
+      expect(result.satisfied).toBe(false);
+      expect(result.missing_requirements?.some((r) => r.includes("not defined"))).toBe(true);
+    });
+
+    it("should handle mixed primitive types in array", async () => {
+      const guard: ContextInGuard = {
+        type: "context",
+        variable: "priority",
+        condition: "in",
+        value: [1, 2, "high"],
+      };
+
+      const result = await evaluateGuard("valid_priority", guard, {
+        artifactPaths: [],
+        context: { priority: 1 },
+      });
+
+      expect(result.satisfied).toBe(true);
+    });
+  });
+
+  describe("evaluateGuard - context not_in condition", () => {
+    it("should satisfy when context variable is not in array", async () => {
+      const guard: ContextNotInGuard = {
+        type: "context",
+        variable: "team_mode",
+        condition: "not_in",
+        value: ["team", "async"],
+      };
+
+      const result = await evaluateGuard("is_solo", guard, {
+        artifactPaths: [],
+        context: { team_mode: "solo" },
+      });
+
+      expect(result.satisfied).toBe(true);
+    });
+
+    it("should not satisfy when context variable is in array", async () => {
+      const guard: ContextNotInGuard = {
+        type: "context",
+        variable: "team_mode",
+        condition: "not_in",
+        value: ["team", "async"],
+      };
+
+      const result = await evaluateGuard("is_solo", guard, {
+        artifactPaths: [],
+        context: { team_mode: "team" },
+      });
+
+      expect(result.satisfied).toBe(false);
+    });
+
+    it("should not satisfy when context variable is not defined (L3)", async () => {
+      const guard: ContextNotInGuard = {
+        type: "context",
+        variable: "team_mode",
+        condition: "not_in",
+        value: ["team", "async"],
+      };
+
+      const result = await evaluateGuard("is_solo", guard, {
+        artifactPaths: [],
+        context: {},
+      });
+
+      expect(result.satisfied).toBe(false);
+      expect(result.missing_requirements?.some((r) => r.includes("not defined"))).toBe(true);
+    });
+  });
+
+  describe("evaluateGuard - context exists condition", () => {
+    it("should satisfy when context variable exists", async () => {
+      const guard: ContextExistsGuard = {
+        type: "context",
+        variable: "assignee",
+        condition: "exists",
+      };
+
+      const result = await evaluateGuard("has_assignee", guard, {
+        artifactPaths: [],
+        context: { assignee: "alice" },
+      });
+
+      expect(result.satisfied).toBe(true);
+    });
+
+    it("should satisfy when context variable exists with null value", async () => {
+      const guard: ContextExistsGuard = {
+        type: "context",
+        variable: "assignee",
+        condition: "exists",
+      };
+
+      const result = await evaluateGuard("has_assignee", guard, {
+        artifactPaths: [],
+        context: { assignee: null },
+      });
+
+      expect(result.satisfied).toBe(true);
+    });
+
+    it("should not satisfy when context variable does not exist", async () => {
+      const guard: ContextExistsGuard = {
+        type: "context",
+        variable: "assignee",
+        condition: "exists",
+      };
+
+      const result = await evaluateGuard("has_assignee", guard, {
+        artifactPaths: [],
+        context: {},
+      });
+
+      expect(result.satisfied).toBe(false);
+      expect(result.missing_requirements?.some((r) => r.includes("does not exist"))).toBe(true);
+    });
+
+    it("should not satisfy when context is undefined", async () => {
+      const guard: ContextExistsGuard = {
+        type: "context",
+        variable: "assignee",
+        condition: "exists",
+      };
+
+      const result = await evaluateGuard("has_assignee", guard, {
+        artifactPaths: [],
+      });
+
+      expect(result.satisfied).toBe(false);
+    });
+  });
+
+  describe("evaluateGuard - context not_exists condition", () => {
+    it("should satisfy when context variable does not exist", async () => {
+      const guard: ContextNotExistsGuard = {
+        type: "context",
+        variable: "assignee",
+        condition: "not_exists",
+      };
+
+      const result = await evaluateGuard("no_assignee", guard, {
+        artifactPaths: [],
+        context: {},
+      });
+
+      expect(result.satisfied).toBe(true);
+    });
+
+    it("should satisfy when context is undefined", async () => {
+      const guard: ContextNotExistsGuard = {
+        type: "context",
+        variable: "assignee",
+        condition: "not_exists",
+      };
+
+      const result = await evaluateGuard("no_assignee", guard, {
+        artifactPaths: [],
+      });
+
+      expect(result.satisfied).toBe(true);
+    });
+
+    it("should not satisfy when context variable exists", async () => {
+      const guard: ContextNotExistsGuard = {
+        type: "context",
+        variable: "assignee",
+        condition: "not_exists",
+      };
+
+      const result = await evaluateGuard("no_assignee", guard, {
+        artifactPaths: [],
+        context: { assignee: "alice" },
+      });
+
+      expect(result.satisfied).toBe(false);
+      expect(result.missing_requirements?.some((r) => r.includes("exists but should not"))).toBe(true);
+    });
+  });
+
+  describe("evaluateGuards - mixed guards", () => {
+    it("should evaluate both artifact and context guards", async () => {
+      const path1 = path.join(TEST_DIR, "doc_1.md");
+      await fs.writeFile(path1, "test");
+
+      const guards: Record<string, Guard> = {
+        has_doc: {
+          type: "artifact",
+          artifact_type: "doc",
+          condition: "exists",
+        },
+        is_complex: {
+          type: "context",
+          variable: "complexity",
+          condition: "equals",
+          value: "high",
+        },
+      };
+
+      const result = await evaluateGuards(guards, ["has_doc", "is_complex"], {
+        artifactPaths: [path1],
+        context: { complexity: "high" },
+      });
+
+      expect(result.all_satisfied).toBe(true);
+      expect(result.results).toHaveLength(2);
+      expect(result.results.find((r) => r.guard_name === "has_doc")?.satisfied).toBe(true);
+      expect(result.results.find((r) => r.guard_name === "is_complex")?.satisfied).toBe(true);
     });
   });
 });

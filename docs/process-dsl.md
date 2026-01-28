@@ -264,9 +264,13 @@ roles:
 
 ## ガード条件の詳細
 
-### 成果物ガード（MVP）
+state_gate は2種類のガードをサポートする:
+- **成果物ガード（ArtifactGuard）**: 成果物の存在・件数をチェック
+- **コンテキストガード（ContextGuard）**: コンテキスト変数の値をチェック
 
-MVP では `exists`（存在チェック）と `count`（件数チェック）のみをサポート。
+### 成果物ガード
+
+成果物の存在チェック（`exists`）と件数チェック（`count`）をサポート。
 
 ```yaml
 guards:
@@ -283,6 +287,99 @@ guards:
     condition: count
     min_count: 3
 ```
+
+### コンテキストガード
+
+コンテキスト変数の値に基づいて遷移の可否を判定する。
+
+#### 条件タイプ
+
+| 条件 | 説明 | value フィールド |
+|------|------|-----------------|
+| `equals` | 完全一致 | 単一値（必須） |
+| `not_equals` | 不一致 | 単一値（必須） |
+| `in` | 配列内に含まれる | 配列（必須） |
+| `not_in` | 配列内に含まれない | 配列（必須） |
+| `exists` | 変数が存在する | 不要 |
+| `not_exists` | 変数が存在しない | 不要 |
+
+#### 使用可能な値の型
+
+`value` フィールドにはプリミティブ型のみ使用可能:
+- `string`（文字列）
+- `number`（数値）
+- `boolean`（真偽値）
+- `null`
+
+#### 未定義変数の扱い
+
+**重要**: 存在しないコンテキスト変数への参照は `false` を返す（エラーではない）。
+これは `exists` / `not_exists` 条件以外のすべての条件に適用される。
+
+#### 使用例
+
+```yaml
+guards:
+  # 完全一致
+  is_complex_task:
+    type: context
+    variable: complexity
+    condition: equals
+    value: "high"
+
+  # 配列内に含まれる
+  is_team_work:
+    type: context
+    variable: team_mode
+    condition: in
+    value: ["team", "async"]
+
+  # 変数の存在チェック
+  has_assignee:
+    type: context
+    variable: assignee
+    condition: exists
+
+  # 変数が存在しないことをチェック
+  no_reviewer:
+    type: context
+    variable: reviewer
+    condition: not_exists
+
+  # 数値の比較（完全一致）
+  is_high_priority:
+    type: context
+    variable: priority
+    condition: equals
+    value: 1
+
+  # 真偽値のチェック
+  is_urgent:
+    type: context
+    variable: urgent
+    condition: equals
+    value: true
+
+transitions:
+  # ガード付き遷移
+  - from: triage
+    event: start_work
+    to: planning
+    guard: is_complex_task
+
+  # デフォルト遷移（ガードなし）
+  - from: triage
+    event: start_work
+    to: implementation
+    # ガードなし = デフォルト遷移
+```
+
+#### 遷移の選択ルール
+
+同一の `from` 状態 + `event` の組み合わせに複数の遷移がある場合:
+1. ガード付き遷移が先に評価される
+2. ガードが満たされた最初の遷移が選択される
+3. すべてのガード付き遷移が失敗した場合、ガードなし遷移が選択される
 
 ---
 

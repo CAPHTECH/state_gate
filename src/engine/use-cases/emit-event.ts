@@ -172,6 +172,7 @@ export async function emitEvent(
 
   const guardContext: GuardEvaluationContext = {
     artifactPaths: newArtifactPaths,
+    context: metadata.context,
   };
 
   const guardResult = await evaluateTransitionGuard(

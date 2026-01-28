@@ -157,6 +157,185 @@ roles:
     expect(process.guards.enough_items.condition).toBe("count");
     expect((process.guards.enough_items as { min_count: number }).min_count).toBe(3);
   });
+
+  it("should parse context equals guard", () => {
+    const yamlWithContextGuard = `
+process:
+  id: context-process
+  version: "1.0.0"
+  name: Context Process
+  initial_state: start
+
+states:
+  - name: start
+  - name: end
+    is_final: true
+
+events:
+  - name: submit
+    allowed_roles: [agent]
+
+transitions:
+  - from: start
+    event: submit
+    to: end
+    guard: is_complex
+
+guards:
+  is_complex:
+    type: context
+    variable: complexity
+    condition: equals
+    value: "high"
+
+artifacts: []
+
+roles:
+  - name: agent
+    allowed_events: [submit]
+`;
+    const process = parseProcess(yamlWithContextGuard);
+    expect(process.guards.is_complex.type).toBe("context");
+    expect((process.guards.is_complex as { variable: string }).variable).toBe("complexity");
+    expect(process.guards.is_complex.condition).toBe("equals");
+    expect((process.guards.is_complex as { value: string }).value).toBe("high");
+  });
+
+  it("should parse context in guard with array value", () => {
+    const yamlWithContextInGuard = `
+process:
+  id: context-in-process
+  version: "1.0.0"
+  name: Context In Process
+  initial_state: start
+
+states:
+  - name: start
+  - name: end
+    is_final: true
+
+events:
+  - name: submit
+    allowed_roles: [agent]
+
+transitions:
+  - from: start
+    event: submit
+    to: end
+    guard: is_team_work
+
+guards:
+  is_team_work:
+    type: context
+    variable: team_mode
+    condition: in
+    value: ["team", "async"]
+
+artifacts: []
+
+roles:
+  - name: agent
+    allowed_events: [submit]
+`;
+    const process = parseProcess(yamlWithContextInGuard);
+    expect(process.guards.is_team_work.type).toBe("context");
+    expect(process.guards.is_team_work.condition).toBe("in");
+    expect((process.guards.is_team_work as { value: string[] }).value).toEqual(["team", "async"]);
+  });
+
+  it("should parse context exists guard", () => {
+    const yamlWithContextExistsGuard = `
+process:
+  id: context-exists-process
+  version: "1.0.0"
+  name: Context Exists Process
+  initial_state: start
+
+states:
+  - name: start
+  - name: end
+    is_final: true
+
+events:
+  - name: submit
+    allowed_roles: [agent]
+
+transitions:
+  - from: start
+    event: submit
+    to: end
+    guard: has_assignee
+
+guards:
+  has_assignee:
+    type: context
+    variable: assignee
+    condition: exists
+
+artifacts: []
+
+roles:
+  - name: agent
+    allowed_events: [submit]
+`;
+    const process = parseProcess(yamlWithContextExistsGuard);
+    expect(process.guards.has_assignee.type).toBe("context");
+    expect(process.guards.has_assignee.condition).toBe("exists");
+  });
+
+  it("should parse mixed artifact and context guards", () => {
+    const yamlWithMixedGuards = `
+process:
+  id: mixed-guards-process
+  version: "1.0.0"
+  name: Mixed Guards Process
+  initial_state: start
+
+states:
+  - name: start
+  - name: planning
+  - name: end
+    is_final: true
+
+events:
+  - name: start_work
+    allowed_roles: [agent]
+  - name: finish
+    allowed_roles: [agent]
+
+transitions:
+  - from: start
+    event: start_work
+    to: planning
+    guard: is_complex
+  - from: planning
+    event: finish
+    to: end
+    guard: has_doc
+
+guards:
+  is_complex:
+    type: context
+    variable: complexity
+    condition: equals
+    value: "high"
+  has_doc:
+    type: artifact
+    artifact_type: document
+    condition: exists
+
+artifacts:
+  - type: document
+    description: Required document
+
+roles:
+  - name: agent
+    allowed_events: [start_work, finish]
+`;
+    const process = parseProcess(yamlWithMixedGuards);
+    expect(process.guards.is_complex.type).toBe("context");
+    expect(process.guards.has_doc.type).toBe("artifact");
+  });
 });
 
 describe("Process Validator", () => {

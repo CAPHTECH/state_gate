@@ -165,9 +165,10 @@ export interface Transition {
 
 /**
  * ガード条件の基底型
- * MVP では成果物ガードのみをサポート
+ * - ArtifactGuard: 成果物の存在・件数をチェック
+ * - ContextGuard: コンテキスト変数の値をチェック
  */
-export type Guard = ArtifactGuard;
+export type Guard = ArtifactGuard | ContextGuard;
 
 /**
  * 成果物の存在・件数をチェックするガード（MVP）
@@ -194,6 +195,89 @@ export interface ArtifactCountGuard {
    */
   min_count: number;
 }
+
+// =============================================================================
+// ContextGuard: コンテキスト変数に基づくガード条件
+// =============================================================================
+
+/**
+ * コンテキストガードの判別共用体型
+ * condition に応じた必須フィールドを型レベルで強制
+ */
+export type ContextGuard =
+  | ContextEqualsGuard
+  | ContextNotEqualsGuard
+  | ContextInGuard
+  | ContextNotInGuard
+  | ContextExistsGuard
+  | ContextNotExistsGuard;
+
+/**
+ * コンテキスト変数の値が指定値と一致することをチェック
+ */
+export interface ContextEqualsGuard {
+  type: "context";
+  /** チェック対象のコンテキスト変数名 */
+  variable: string;
+  condition: "equals";
+  /** 期待する値（primitive 型のみ） */
+  value: ContextPrimitiveValue;
+}
+
+/**
+ * コンテキスト変数の値が指定値と不一致であることをチェック
+ */
+export interface ContextNotEqualsGuard {
+  type: "context";
+  variable: string;
+  condition: "not_equals";
+  value: ContextPrimitiveValue;
+}
+
+/**
+ * コンテキスト変数の値が指定配列に含まれることをチェック
+ */
+export interface ContextInGuard {
+  type: "context";
+  variable: string;
+  condition: "in";
+  /** 許可する値の配列 */
+  value: ContextPrimitiveValue[];
+}
+
+/**
+ * コンテキスト変数の値が指定配列に含まれないことをチェック
+ */
+export interface ContextNotInGuard {
+  type: "context";
+  variable: string;
+  condition: "not_in";
+  value: ContextPrimitiveValue[];
+}
+
+/**
+ * コンテキスト変数が存在することをチェック
+ */
+export interface ContextExistsGuard {
+  type: "context";
+  variable: string;
+  condition: "exists";
+}
+
+/**
+ * コンテキスト変数が存在しないことをチェック
+ */
+export interface ContextNotExistsGuard {
+  type: "context";
+  variable: string;
+  condition: "not_exists";
+}
+
+/**
+ * コンテキストガードで使用可能なプリミティブ値
+ * @law L4: primitive 型（string, number, boolean, null）のみを扱う
+ */
+export type ContextPrimitiveValue = string | number | boolean | null;
 
 /**
  * イベント発行・承認などの権限制御
@@ -298,4 +382,6 @@ export type ProcessValidationErrorCode =
   /** allowed_roles に "*" と他のロールが混在 */
   | "INVALID_WILDCARD_ROLE"
   /** min_count が負の値 */
-  | "INVALID_MIN_COUNT";
+  | "INVALID_MIN_COUNT"
+  /** ContextGuard の condition と value の不整合 */
+  | "INVALID_CONTEXT_GUARD_VALUE";
