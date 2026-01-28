@@ -460,6 +460,21 @@ async function startServer(options: Record<string, OptionValue>): Promise<void> 
     }
   }
 
+  // --process オプションなしの場合、デフォルトディレクトリから自動読み込み
+  if (processFiles.length === 0) {
+    try {
+      const defaultDir = DEFAULT_PROCESS_DIR;
+      const entries = await fs.readdir(defaultDir);
+      for (const entry of entries) {
+        if (entry.endsWith(".yaml") || entry.endsWith(".yml")) {
+          processFiles.push(path.join(defaultDir, entry));
+        }
+      }
+    } catch {
+      // ディレクトリが存在しない場合は無視
+    }
+  }
+
   const runsDir = getStringOption(options, ["runs-dir"]);
   const metadataDir = getStringOption(options, ["metadata-dir"]);
   const defaultRole = getStringOption(options, ["role"]);
