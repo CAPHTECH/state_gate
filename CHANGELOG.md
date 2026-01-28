@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-01-28
+
+### Added
+- ContextGuard: Context variable-based guard conditions for state transitions
+  - `equals` / `not_equals`: Exact value matching
+  - `in` / `not_in`: Value membership in array
+  - `exists` / `not_exists`: Variable existence check
+- Support for primitive types in context guards: string, number, boolean, null
+- Multi-transition fallback: When guarded transition fails, falls back to guardless transitions
+- E2E integration tests for ContextGuard feature (22 new tests)
+- Updated Process DSL documentation with ContextGuard examples
+
+### Changed
+- Guard type extended to discriminated union: `ArtifactGuard | ContextGuard`
+- emit-event now evaluates multiple transitions per DSL spec:
+  1. Guarded transitions evaluated first
+  2. First satisfied guard wins
+  3. Falls back to guardless transition if all guards fail
+
+### Fixed
+- emit-event transition selection now correctly follows DSL "遷移の選択ルール" specification
+
 ## [0.1.0] - 2026-01-23
 
 ### Added
@@ -57,4 +79,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - N/A (initial release)
 
+[0.2.0]: https://github.com/CAPHTECH/state_gate/releases/tag/v0.2.0
 [0.1.0]: https://github.com/CAPHTECH/state_gate/releases/tag/v0.1.0
