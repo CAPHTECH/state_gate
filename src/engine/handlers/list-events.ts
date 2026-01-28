@@ -36,7 +36,10 @@ export async function handleListEvents(
   const latestEntry = entries.length > 0 ? entries[entries.length - 1] : undefined;
   const artifactPaths = latestEntry?.artifact_paths ?? [];
 
-  const guardContext: GuardEvaluationContext = { artifactPaths };
+  const guardContext: GuardEvaluationContext = {
+    artifactPaths,
+    context: runState.context,
+  };
 
   // イベントごとの遷移情報を収集
   const eventTransitionsMap = new Map<

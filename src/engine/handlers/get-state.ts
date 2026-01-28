@@ -43,7 +43,10 @@ export async function handleGetState(
   const latestEntry = entries.length > 0 ? entries[entries.length - 1] : undefined;
   const artifactPaths = latestEntry?.artifact_paths ?? [];
 
-  const guardContext: GuardEvaluationContext = { artifactPaths };
+  const guardContext: GuardEvaluationContext = {
+    artifactPaths,
+    context: runState.context,
+  };
 
   // 未充足のガードを収集
   const missingGuards: MissingGuard[] = [];
