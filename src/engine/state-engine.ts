@@ -4,6 +4,8 @@
  * @see docs/concepts.md
  */
 
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import type {
   Process,
   RunId,
@@ -15,6 +17,8 @@ import type {
 } from "../types/index.js";
 import { ProcessRegistry } from "./services/process-registry.js";
 import { RunStore } from "./services/run-store.js";
+import { parseProcessFile } from "../process/parser.js";
+import { validateProcess } from "../process/validator.js";
 import { createRun as createRunUseCase } from "./use-cases/create-run.js";
 import { emitEvent as emitEventUseCase, type EmitEventParams as EmitEventUseCaseParams, type EmitEventResult } from "./use-cases/emit-event.js";
 import { getRunState as getRunStateUseCase } from "./use-cases/get-run-state.js";
@@ -63,7 +67,11 @@ export interface StateEngineOptions {
   runsDir?: string;
   /** メタデータストアのベースディレクトリ */
   metadataDir?: string;
+  /** プロセス定義ファイルのディレクトリ（デフォルト: .state_gate/processes） */
+  processDir?: string;
 }
+
+const DEFAULT_PROCESS_DIR = ".state_gate/processes";
 
 /**
  * Run 作成パラメータ
@@ -96,6 +104,7 @@ export type { EmitEventResult };
 export class StateEngine {
   private readonly processRegistry: ProcessRegistry;
   private readonly runStore: RunStore;
+  private readonly processDir: string;
 
   constructor(options: StateEngineOptions = {}) {
     this.processRegistry = new ProcessRegistry();
@@ -103,6 +112,7 @@ export class StateEngine {
       runsDir: options.runsDir,
       metadataDir: options.metadataDir,
     });
+    this.processDir = options.processDir ?? DEFAULT_PROCESS_DIR;
   }
 
   /**
@@ -113,16 +123,59 @@ export class StateEngine {
   }
 
   /**
-   * プロセス定義を取得
+   * プロセス定義を取得（キャッシュミス時はファイルから読み込み）
    */
   getProcess(processId: string): Process | undefined {
     return this.processRegistry.get(processId);
   }
 
   /**
+   * プロセス定義を取得（非同期、キャッシュミス時はファイルから読み込み）
+   */
+  async getProcessAsync(processId: string): Promise<Process | undefined> {
+    // キャッシュにあればそれを返す
+    const cached = this.processRegistry.get(processId);
+    if (cached) {
+      return cached;
+    }
+
+    // ファイルから読み込み
+    const loaded = await this.loadProcessFromFile(processId);
+    if (loaded) {
+      this.processRegistry.register(loaded);
+      return loaded;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * プロセス定義をファイルから読み込み
+   */
+  private async loadProcessFromFile(processId: string): Promise<Process | undefined> {
+    const extensions = [".yaml", ".yml"];
+    for (const ext of extensions) {
+      const filePath = path.join(this.processDir, `${processId}${ext}`);
+      try {
+        await fs.access(filePath);
+        const process = await parseProcessFile(filePath);
+        const validation = validateProcess(process);
+        if (validation.valid) {
+          return process;
+        }
+      } catch {
+        // ファイルが存在しないか読み込みエラー
+      }
+    }
+    return undefined;
+  }
+
+  /**
    * 新しい Run を作成
    */
   async createRun(params: CreateRunParams): Promise<RunState> {
+    // プロセスを動的に読み込み
+    await this.ensureProcessLoaded(params.processId);
     return createRunUseCase(params, this.processRegistry, this.runStore);
   }
 
@@ -130,6 +183,8 @@ export class StateEngine {
    * Run の現在状態を取得
    */
   async getRunState(runId: RunId): Promise<RunState> {
+    // Run のメタデータからプロセスを動的に読み込み
+    await this.ensureProcessLoadedForRun(runId);
     return getRunStateUseCase(runId, this.processRegistry, this.runStore);
   }
 
@@ -137,6 +192,8 @@ export class StateEngine {
    * イベントを発行
    */
   async emitEvent(params: EmitEventParams): Promise<EmitEventResult> {
+    // Run のメタデータからプロセスを動的に読み込み
+    await this.ensureProcessLoadedForRun(params.runId);
     const useCaseParams: EmitEventUseCaseParams = {
       runId: params.runId,
       eventName: params.eventName,
@@ -160,7 +217,30 @@ export class StateEngine {
     runId: RunId,
     role: string
   ): Promise<{ events: AvailableEventInfo[] }> {
+    // Run のメタデータからプロセスを動的に読み込み
+    await this.ensureProcessLoadedForRun(runId);
     return getAvailableEventsUseCase(runId, role, this.processRegistry, this.runStore);
+  }
+
+  /**
+   * プロセスが読み込まれていることを保証
+   */
+  private async ensureProcessLoaded(processId: string): Promise<void> {
+    if (this.processRegistry.has(processId)) {
+      return;
+    }
+    await this.getProcessAsync(processId);
+  }
+
+  /**
+   * Run に関連するプロセスが読み込まれていることを保証
+   */
+  private async ensureProcessLoadedForRun(runId: RunId): Promise<void> {
+    const metadata = await this.runStore.loadMetadata(runId);
+    if (!metadata) {
+      return; // use-case 側で RUN_NOT_FOUND エラーになる
+    }
+    await this.ensureProcessLoaded(metadata.process_id);
   }
 
   /**
