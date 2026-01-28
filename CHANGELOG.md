@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.6] - 2026-01-28
+
+### Changed
+- Plugin no longer includes MCP server configuration
+  - Removed `.mcp.json` from plugin distribution
+  - Users must configure MCP server in project's `.mcp.json` with `STATE_GATE_PROJECT_ROOT` env var
+  - This ensures correct working directory for each project
+
+### Documentation
+- Added "MCP Server Configuration" section to README
+  - Explains how to configure `.mcp.json` for each project
+  - Clarifies that plugin provides hooks only, not MCP server
+
 ## [0.2.5] - 2026-01-28
 
 ### Added
@@ -120,6 +133,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - N/A (initial release)
 
+[0.2.6]: https://github.com/CAPHTECH/state_gate/releases/tag/v0.2.6
 [0.2.5]: https://github.com/CAPHTECH/state_gate/releases/tag/v0.2.5
 [0.2.4]: https://github.com/CAPHTECH/state_gate/releases/tag/v0.2.4
 [0.2.3]: https://github.com/CAPHTECH/state_gate/releases/tag/v0.2.3

@@ -141,10 +141,31 @@ state_gate is distributed as a Claude Code Plugin and can be installed easily.
 
 When you install the plugin, the following become automatically available:
 
-- **MCP Server**: `mcp__state-gate__*` tool suite (`get_state`, `emit_event`, `list_events`, etc.)
+- **Hooks**: PreToolUse, PostToolUse, SessionStart hooks for state management
 - **PreToolUse Hook**: Permission checks before tool execution (based on `tool_permissions` in process definition)
 - **PostToolUse Hook**: State display after event emission (automatically inserts new state prompt)
 - **SessionStart Hook**: State display after compaction
+
+### MCP Server Configuration (Required)
+
+The plugin provides hooks only. You need to configure the MCP server in each project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "state-gate": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@caphtech/state-gate", "serve"],
+      "env": {
+        "STATE_GATE_PROJECT_ROOT": "/path/to/your/project"
+      }
+    }
+  }
+}
+```
+
+**Important**: Set `STATE_GATE_PROJECT_ROOT` to your project's absolute path. This ensures the MCP server uses the correct `.state_gate/` directory.
 
 ### After npm Publication
 
