@@ -28,9 +28,11 @@ import { validateProcess } from "../process/validator.js";
  * プロジェクトルートを取得
  * 環境変数 STATE_GATE_PROJECT_ROOT が設定されていればそれを使用、
  * そうでなければ process.cwd() を使用
+ * 相対パスは process.cwd() を基準に解決される
  */
 function getProjectRoot(): string {
-  return process.env.STATE_GATE_PROJECT_ROOT || process.cwd();
+  const root = process.env.STATE_GATE_PROJECT_ROOT || process.cwd();
+  return path.resolve(root);
 }
 
 /**
