@@ -14,6 +14,7 @@ import type {
   ContextVariables,
   AvailableEventInfo,
   ValidationError,
+  RunMetadata,
 } from "../types/index.js";
 import { ProcessRegistry } from "./services/process-registry.js";
 import { RunStore } from "./services/run-store.js";
@@ -255,5 +256,13 @@ export class StateEngine {
    */
   async getEventHistory(runId: RunId): Promise<ParsedRunEntry[]> {
     return getEventHistoryUseCase(runId, this.runStore);
+  }
+
+  /**
+   * Run のメタデータを取得
+   */
+  async getRunMetadata(runId: RunId): Promise<RunMetadata | null> {
+    const metadata = await this.runStore.loadMetadata(runId);
+    return metadata ?? null;
   }
 }

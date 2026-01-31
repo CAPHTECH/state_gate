@@ -38,6 +38,10 @@ export async function handleGetState(
     (s) => s.name === runState.current_state
   );
 
+  // メタデータから artifact_base_path を取得
+  const metadata = await engine.getRunMetadata(request.run_id);
+  const artifactBasePath = metadata?.artifact_base_path;
+
   // 最新エントリの成果物パスを使用
   const entries = await engine.getEventHistory(request.run_id);
   const latestEntry = entries.length > 0 ? entries[entries.length - 1] : undefined;
@@ -46,6 +50,7 @@ export async function handleGetState(
   const guardContext: GuardEvaluationContext = {
     artifactPaths,
     context: runState.context,
+    ...(artifactBasePath !== undefined && { artifactBasePath }),
   };
 
   // 未充足のガードを収集
@@ -76,7 +81,7 @@ export async function handleGetState(
   for (const artifactType of requiredTypes) {
     const artifactDef = process.artifacts.find((a) => a.type === artifactType);
     const relevantPaths = filterPathsByArtifactType(artifactPaths, artifactType);
-    const checkResults = await checkArtifacts(relevantPaths);
+    const checkResults = await checkArtifacts(relevantPaths, artifactBasePath);
     const hasPresent = checkResults.some((r) => r.status === "present");
 
     requiredArtifacts.push({
@@ -131,5 +136,6 @@ export async function handleGetState(
     required_artifacts: requiredArtifacts,
     allowed_events: allowedEvents,
     updated_at: runState.updated_at,
+    ...(artifactBasePath !== undefined && { artifact_base_path: artifactBasePath }),
   };
 }

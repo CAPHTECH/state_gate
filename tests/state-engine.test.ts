@@ -536,14 +536,21 @@ describe("StateEngine - Guard Failure", () => {
   });
 
   it("should succeed when guard is satisfied with artifact", async () => {
-    // テスト用成果物ファイルを作成
-    const artifactPath = `${TEST_RUNS_DIR}/document_test.md`;
-    await fs.mkdir(TEST_RUNS_DIR, { recursive: true });
-    await fs.writeFile(artifactPath, "test document");
-
+    // まず Run を作成
     const created = await engine.createRun({
       processId: "guarded-process",
     });
+
+    // metadata から artifact_base_path を取得し、その配下にファイルを作成
+    const metadata = await engine.getRunMetadata(created.run_id);
+    expect(metadata).not.toBeNull();
+    expect(metadata!.artifact_base_path).toBeDefined();
+
+    const artifactBasePath = metadata!.artifact_base_path!;
+    const relativePath = "document_test.md";
+    const fullPath = `${artifactBasePath}/${relativePath}`;
+    await fs.mkdir(artifactBasePath, { recursive: true });
+    await fs.writeFile(fullPath, "test document");
 
     const result = await engine.emitEvent({
       runId: created.run_id,
@@ -551,7 +558,7 @@ describe("StateEngine - Guard Failure", () => {
       expectedRevision: 1,
       idempotencyKey: "guard-test-005",
       role: "agent",
-      artifactPaths: [artifactPath],
+      artifactPaths: [relativePath],
     });
 
     expect(result.accepted).toBe(true);

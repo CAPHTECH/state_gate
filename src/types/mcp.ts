@@ -63,6 +63,15 @@ export interface GetStateResponse {
    * @law 形式: ISO 8601（例: 2025-01-22T10:00:00Z）
    */
   updated_at: string;
+  /**
+   * Artifact ベースパス
+   * 設定されている場合、artifact はこのパス配下に保存すべき
+   * エージェントは相対パス（例: "evidence/hypothesis.md"）で artifact を指定し、
+   * state_gate がこのベースパスと結合して実際のパスを解決する
+   *
+   * 未設定の場合は後方互換のため従来方式（プロジェクトルート相対）
+   */
+  artifact_base_path?: string;
 }
 
 // =============================================================================

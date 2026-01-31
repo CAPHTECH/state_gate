@@ -164,6 +164,9 @@ export async function emitEvent(
   const guardContext: GuardEvaluationContext = {
     artifactPaths: newArtifactPaths,
     context: metadata.context,
+    ...(metadata.artifact_base_path !== undefined && {
+      artifactBasePath: metadata.artifact_base_path,
+    }),
   };
 
   // 遷移選択ルール:

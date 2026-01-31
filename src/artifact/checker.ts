@@ -5,6 +5,7 @@
  */
 
 import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import type { ArtifactStatus } from "../types/index.js";
 
 /**
@@ -55,25 +56,34 @@ export interface ArtifactCheckResult {
 /**
  * 成果物ファイルの存在をチェック
  * @param paths - チェックするファイルパスの配列
+ * @param basePath - ベースパス（設定時はこのパスを基準に解決）
  * @returns チェック結果の配列
  */
 export async function checkArtifacts(
-  paths: string[]
+  paths: string[],
+  basePath?: string
 ): Promise<ArtifactCheckResult[]> {
-  return Promise.all(paths.map(checkArtifact));
+  return Promise.all(paths.map(p => checkArtifact(p, basePath)));
 }
 
 /**
  * 単一ファイルの存在チェック
- * @param path - チェックするファイルパス
+ * @param relativePath - チェックするファイルパス（相対パス）
+ * @param basePath - ベースパス（設定時はこのパスを基準に解決）
  * @returns チェック結果
  * @throws ArtifactPathError - 不正なパスの場合
  */
-export async function checkArtifact(path: string): Promise<ArtifactCheckResult> {
-  validateArtifactPath(path);
-  const status = await fileExists(path);
+export async function checkArtifact(
+  relativePath: string,
+  basePath?: string
+): Promise<ArtifactCheckResult> {
+  validateArtifactPath(relativePath);
+  const fullPath = basePath
+    ? path.join(basePath, relativePath)
+    : relativePath;
+  const status = await fileExists(fullPath);
   return {
-    path,
+    path: relativePath,
     status: status ? "present" : "missing",
   };
 }
@@ -81,12 +91,16 @@ export async function checkArtifact(path: string): Promise<ArtifactCheckResult> 
 /**
  * 成果物が存在するかチェック（1件以上存在）
  * @param paths - チェックするファイルパスの配列
+ * @param basePath - ベースパス（設定時はこのパスを基準に解決）
  * @returns いずれかのファイルが存在すれば true
  */
-export async function hasAnyArtifact(paths: string[]): Promise<boolean> {
+export async function hasAnyArtifact(
+  paths: string[],
+  basePath?: string
+): Promise<boolean> {
   if (paths.length === 0) return false;
 
-  const results = await checkArtifacts(paths);
+  const results = await checkArtifacts(paths, basePath);
   return results.some((r) => r.status === "present");
 }
 
@@ -94,15 +108,17 @@ export async function hasAnyArtifact(paths: string[]): Promise<boolean> {
  * 指定件数以上の成果物が存在するかチェック
  * @param paths - チェックするファイルパスの配列
  * @param minCount - 必要な最小件数
+ * @param basePath - ベースパス（設定時はこのパスを基準に解決）
  * @returns 存在するファイル数が minCount 以上なら true
  */
 export async function hasMinArtifacts(
   paths: string[],
-  minCount: number
+  minCount: number,
+  basePath?: string
 ): Promise<boolean> {
   if (paths.length === 0) return minCount === 0;
 
-  const results = await checkArtifacts(paths);
+  const results = await checkArtifacts(paths, basePath);
   const presentCount = results.filter((r) => r.status === "present").length;
   return presentCount >= minCount;
 }
@@ -110,12 +126,16 @@ export async function hasMinArtifacts(
 /**
  * 存在するファイル数をカウント
  * @param paths - チェックするファイルパスの配列
+ * @param basePath - ベースパス（設定時はこのパスを基準に解決）
  * @returns 存在するファイルの数
  */
-export async function countPresentArtifacts(paths: string[]): Promise<number> {
+export async function countPresentArtifacts(
+  paths: string[],
+  basePath?: string
+): Promise<number> {
   if (paths.length === 0) return 0;
 
-  const results = await checkArtifacts(paths);
+  const results = await checkArtifacts(paths, basePath);
   return results.filter((r) => r.status === "present").length;
 }
 

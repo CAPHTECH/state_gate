@@ -206,4 +206,12 @@ export interface RunMetadata {
    * イベント payload により動的に更新される
    */
   context: ContextVariables;
+  /**
+   * Artifact ベースパス
+   * 設定されている場合、artifact はこのパス配下に保存される
+   * 未設定の場合は後方互換のため従来方式（プロジェクトルート相対）
+   *
+   * 例: ".state_gate/artifacts/run-xxx"
+   */
+  artifact_base_path?: string;
 }

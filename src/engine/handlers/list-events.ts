@@ -31,6 +31,10 @@ export async function handleListEvents(
     );
   }
 
+  // メタデータから artifact_base_path を取得
+  const metadata = await engine.getRunMetadata(request.run_id);
+  const artifactBasePath = metadata?.artifact_base_path;
+
   // 最新エントリの成果物パスを使用
   const entries = await engine.getEventHistory(request.run_id);
   const latestEntry = entries.length > 0 ? entries[entries.length - 1] : undefined;
@@ -39,6 +43,7 @@ export async function handleListEvents(
   const guardContext: GuardEvaluationContext = {
     artifactPaths,
     context: runState.context,
+    ...(artifactBasePath !== undefined && { artifactBasePath }),
   };
 
   // イベントごとの遷移情報を収集

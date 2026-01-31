@@ -37,6 +37,7 @@ const RunMetadataSchema = z.object({
   process_id: z.string(),
   created_at: z.string(),
   context: z.record(z.unknown()).optional(),
+  artifact_base_path: z.string().optional(),
 });
 
 /**

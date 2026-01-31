@@ -14,6 +14,7 @@ import type {
 import type { ProcessRegistry } from "../services/process-registry.js";
 import type { RunStore } from "../services/run-store.js";
 import { StateEngineError } from "../state-engine.js";
+import { ArtifactStore } from "../../artifact/index.js";
 
 /**
  * CreateRun パラメータ
@@ -58,12 +59,18 @@ export async function createRun(
     ...params.context,
   };
 
+  // Artifact ディレクトリを作成
+  const artifactStore = new ArtifactStore();
+  const artifactBasePath = artifactStore.getArtifactDir(runId);
+  await artifactStore.ensureArtifactDir(runId);
+
   // メタデータ
   const metadata: RunMetadata = {
     run_id: runId,
     process_id: params.processId,
     created_at: now,
     context,
+    artifact_base_path: artifactBasePath,
   };
 
   // 保存

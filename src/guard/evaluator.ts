@@ -35,6 +35,12 @@ export interface GuardEvaluationContext {
   artifactPaths: string[];
   /** コンテキスト変数（ContextGuard 評価用） */
   context?: ContextVariables;
+  /**
+   * Artifact ベースパス
+   * 設定されている場合、artifact チェック時にこのパスを基準に解決する
+   * 未設定の場合は後方互換のため従来方式（プロジェクトルート相対）
+   */
+  artifactBasePath?: string;
 }
 
 /**
@@ -82,7 +88,7 @@ async function evaluateExistsGuard(
     guard.artifact_type
   );
 
-  const exists = await hasAnyArtifact(relevantPaths);
+  const exists = await hasAnyArtifact(relevantPaths, context.artifactBasePath);
 
   if (exists) {
     return {
@@ -113,7 +119,7 @@ async function evaluateCountGuard(
     guard.artifact_type
   );
 
-  const count = await countPresentArtifacts(relevantPaths);
+  const count = await countPresentArtifacts(relevantPaths, context.artifactBasePath);
 
   if (count >= guard.min_count) {
     return {
