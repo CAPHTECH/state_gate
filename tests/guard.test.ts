@@ -23,7 +23,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
 // テスト用のテンポラリディレクトリ
-const TEST_DIR = ".test_artifacts";
+const TEST_DIR = ".test_guard_artifacts";
 
 describe("Guard Evaluator", () => {
   beforeEach(async () => {
