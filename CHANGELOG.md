@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-02-01
+
+### Added
+- Per-run artifact isolation
+  - Artifacts are now stored in `.state_gate/artifacts/{run_id}/` for each run
+  - New `ArtifactStore` class for managing run-specific artifact directories
+  - `artifact_base_path` field added to `RunMetadata` and `GetStateResponse`
+  - Agents specify relative paths (e.g., `evidence/hypothesis.md`), state_gate resolves to full path
+  - Prevents artifact conflicts between parallel runs and simplifies cleanup
+- `getRunMetadata()` method added to `StateEngine`
+
+### Changed
+- Artifact checker functions (`checkArtifact`, `checkArtifacts`, `hasAnyArtifact`, `countPresentArtifacts`) now accept optional `basePath` parameter
+- Guard evaluation context (`GuardEvaluationContext`) includes `artifactBasePath` for proper path resolution
+
+### Fixed
+- Test script changed from `vitest` to `vitest run` for explicit CI execution
+- Project root resolution now converts relative paths to absolute paths
+
+### Migration Notes
+- Existing runs without `artifact_base_path` continue to work (backward compatible)
+- New runs automatically use the new per-run artifact directory structure
+
 ## [0.2.6] - 2026-01-28
 
 ### Changed
